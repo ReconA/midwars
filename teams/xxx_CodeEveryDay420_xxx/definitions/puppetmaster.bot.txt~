@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<bot
-  name="xxx_CodeEveryDay420_xxx_PuppetMaster"
-  description="xxx_CodeEveryDay420_xxx Puppet Master"
-  heroname="Hero_PuppetMaster"
-  rootlua="../heroes/puppetmaster_main.lua"
-  defaultplayername="xxx_CodeEveryDay420_xxxPuppetMasterBot"
-  precachepath="/heroes/puppetmaster/"
-/>
