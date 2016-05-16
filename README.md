@@ -1,4 +1,4 @@
-#AI for Games III course project.
+#AI for Games III course project
 A bot team for Heroes of Newerth. 
 
 # tkt-hon Midwars Tourney
