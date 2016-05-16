@@ -51,7 +51,7 @@ object.heroName = 'Hero_PuppetMaster'
 --------------------------------
 -- Lanes
 --------------------------------
-core.tLanePreferences = {Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 4, LongCarry = 3}
+core.tLanePreferences = {Jungle = 0, Mid = 5, ShortSolo = 0, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 0, LongCarry = 0} -- First tourney is mid only
 
 --------------------------------
 -- Skills
