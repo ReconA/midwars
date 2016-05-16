@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bot
+  name="xxx_CodeEveryDay420_xxx_Valkyrie"
+  description="xxx_CodeEveryDay420_xxx Valkyrie"
+  heroname="Hero_Valkyrie"
+  rootlua="../heroes/valkyrie_main.lua"
+  defaultplayername="xxx_CodeEveryDay420_xxxValkyrieBot"
+  precachepath="/heroes/valkyrie/"
+/>

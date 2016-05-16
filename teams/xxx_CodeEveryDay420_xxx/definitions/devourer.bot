@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bot
+  name="xxx_CodeEveryDay420_xxx_Devourer"
+  description="xxx_CodeEveryDay420_xxx Devourer"
+  heroname="Hero_Devourer"
+  rootlua="../heroes/devourer_main.lua"
+  defaultplayername="xxx_CodeEveryDay420_xxxDevourerBot"
+  precachepath="/heroes/devourer/"
+/>
