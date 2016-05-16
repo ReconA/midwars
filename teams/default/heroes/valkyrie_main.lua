@@ -100,6 +100,9 @@ end
 function object:onthinkOverride(tGameVariables)
   self:onthinkOld(tGameVariables)
 
+local angle = core.HeadingDifference(core.unitSelf, core.allyMainBaseStructure:GetPosition())
+	
+	core.BotEcho(angle)
   -- custom code here
 end
 object.onthinkOld = object.onthink
@@ -119,5 +122,18 @@ end
 -- override combat event trigger function.
 object.oncombateventOld = object.oncombatevent
 object.oncombatevent = object.oncombateventOverride
+
+function behaviorLib.CustomRetreatExecute(botBrain)
+	local leap = skills.leap
+	local unitSelf = core.unitSelf
+	local angle = core.HeadingDifference(unitSelf, core.allyMainBaseStructure:GetPosition())
+	
+
+	if leap and leap:CanActivate() and angle < 0.5 then
+		core.BotEcho("LEAP")
+		return core.OrderAbility(botBrain, leap)
+	end
+	return false
+end
 
 BotEcho('finished loading valkyrie_main')

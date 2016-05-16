@@ -1,7 +1,9 @@
+
 #AI for Games III course project
 A bot team for Heroes of Newerth. 
 
 HoN Bot Repository for reference: https://github.com/honteam/Heroes-of-Newerth-Bots
+
 
 # tkt-hon Midwars Tourney
 
