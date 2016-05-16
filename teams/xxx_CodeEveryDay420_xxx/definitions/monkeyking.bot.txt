@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<bot
-  name="xxx_CodeEveryDay420_xxx_MonkeyKing"
-  description="xxx_CodeEveryDay420_xxx Monkey King"
-  heroname="Hero_MonkeyKing"
-  rootlua="../heroes/monkeyking_main.lua"
-  defaultplayername="xxx_CodeEveryDay420_xxxMonkeyKingBot"
-  precachepath="/heroes/monkey_king/"
-/>
