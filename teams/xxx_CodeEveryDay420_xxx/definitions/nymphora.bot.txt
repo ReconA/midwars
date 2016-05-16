@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bot
-  name="*team name*_Nymphora"
-  description="*team name* Nymphora"
+  name="xxx_CodeEveryDay420_xxx_Nymphora"
+  description="xxx_CodeEveryDay420_xxx Nymphora"
   heroname="Hero_Fairy"
   rootlua="../heroes/nymphora_main.lua"
-  defaultplayername="*team name*NymphoraBot"
+  defaultplayername="xxx_CodeEveryDay420_xxxNymphoraBot"
   precachepath="/heroes/fairy/"
 />
