@@ -78,14 +78,15 @@ function object:SkillBuild()
     return
   end
 
-  if skills.ulti:CanLevelUp() then
-    skills.ulti:LevelUp()
-  elseif skills.javelin:CanLevelUp() then
-    skills.javelin:LevelUp()
+
+  if skills.call:CanLevelUp() then
+    skills.call:LevelUp()
   elseif skills.leap:CanLevelUp() then
     skills.leap:LevelUp()
-  elseif skills.call:CanLevelUp() then
-    skills.call:LevelUp()
+  elseif skills.javelin:CanLevelUp() then
+    skills.javelin:LevelUp()
+  elseif skills.ulti:CanLevelUp() then
+    skills.ulti:LevelUp()
   else
     skills.attributeBoost:LevelUp()
   end
@@ -120,4 +121,15 @@ end
 object.oncombateventOld = object.oncombatevent
 object.oncombatevent = object.oncombateventOverride
 
+function bahaviorLib.CustomRetreatExecute(botBrain)
+  local leap = skills.leap
+  local unitSelf = core.unitSelf
+
+  if leap and leap:CanActivate() then
+    core.BotEcho("LEAP")
+    return core.OrderAbility(botBrain, leap)
+  end
+  return false
+end
+  
 BotEcho('finished loading valkyrie_main')
