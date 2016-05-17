@@ -1,0 +1,32 @@
+How to run our bots:
+
+1v1 mode:
+1. Start game
+2. Press Ctrl+F8 to open console
+3. Copy and paste following command to the console: 
+
+Alias "create_midwars_botmatch_1v1" "set teambotmanager_legion; set teambotmanager_hellbourne; BotDebugEnable; StartGame practice test mode:botmatch map:midwars teamsize:1 spectators:1 allowduplicate:true; g_botDifficulty 3; g_camDistanceMax 10000; g_camDistanceMaxSpectator 10000;"
+
+4. Copy and paste one of the following commands to the console:
+Alias "set_xx_puppet" "set teambotmanager_legion xxx_CodeEveryDay420_xxx; AddBot 1 xxx_CodeEveryDay420_xxx_PuppetMaster;"
+
+Alias "set_xx_devourer" "set teambotmanager_legion xxx_CodeEveryDay420_xxx; AddBot 1 xxx_CodeEveryDay420_xxx_Devourer;"
+
+Alias "set_xx_valkyrie" "set teambotmanager_legion xxx_CodeEveryDay420_xxx; AddBot 1 xxx_CodeEveryDay420_xxx_Valkyrie;"
+
+Alias "set_xx_monkey" "set teambotmanager_legion xxx_CodeEveryDay420_xxx; AddBot 1 xxx_CodeEveryDay420_xxx_MonkeyKing;"
+
+Alias "set_xx_nymph" "set teambotmanager_legion xxx_CodeEveryDay420_xxx; AddBot 1 xxx_CodeEveryDay420_xxx_Nymphora;"
+
+5. Copy paste this to the console: 
+Alias "set_default_enemy" "set teambotmanager_hellbourne xxx_CodeEveryDay420_xxx; AddBot 2 Default_Devourer;"
+
+6. Type "create_midwars_botmatch_1v1" to the console.
+
+7. Type "set_xx_<hero>" where <hero> is the one of the options from step 4, eg. "set_xx_nymph".
+
+8. Type "set_default_enemy" to the console.
+
+8. Close the console and set yourself as a spectator by clicking the round "Become a Spectator" button at the center top of the screen.
+
+9. Click Start Game.
