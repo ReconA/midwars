@@ -48,47 +48,46 @@ BotEcho('loading puppetmaster_main...')
 
 object.heroName = 'Hero_PuppetMaster'
 
+-- Skillbuild table, 0=Hold, 1=Puppet Show, 2=Whiplash, 3=Voodoo, 4=Attri
+object.tSkills = {
+    2, 1, 2, 2, 2,
+    3, 4, 1, 1, 1, 
+    3, 4, 4, 4, 4,
+    3, 4, 4, 4, 4,
+    4, 4, 4, 4, 4,
+}
+
 --------------------------------
 -- Lanes
 --------------------------------
-core.tLanePreferences = {Jungle = 0, Mid = 5, ShortSolo = 0, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 0, LongCarry = 0} -- First tourney is mid only
+core.tLanePreferences = {Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 4, LongCarry = 3}
+
 
 --------------------------------
 -- Skills
 --------------------------------
-local bSkillsValid = false
 function object:SkillBuild()
-  local unitSelf = self.core.unitSelf
+    core.VerboseLog("SkillBuild()")
 
-  if not bSkillsValid then
-    skills.hold = unitSelf:GetAbility(0)
-    skills.show = unitSelf:GetAbility(1)
-    skills.whip = unitSelf:GetAbility(2)
-    skills.ulti = unitSelf:GetAbility(3)
-    skills.attributeBoost = unitSelf:GetAbility(4)
-
-    if skills.hold and skills.show and skills.whip and skills.ulti and skills.attributeBoost then
-      bSkillsValid = true
-    else
-      return
+-- takes care at load/reload, <NAME_#> to be replaced by some convinient name.
+    local unitSelf = self.core.unitSelf
+    if  skills.abilQ == nil then
+        skills.abilQ = unitSelf:GetAbility(0)
+        skills.abilW = unitSelf:GetAbility(1)
+        skills.abilE = unitSelf:GetAbility(2)
+        skills.abilR = unitSelf:GetAbility(3)
+        skills.abilAttributeBoost = unitSelf:GetAbility(4)
     end
-  end
-
-  if unitSelf:GetAbilityPointsAvailable() <= 0 then
-    return
-  end
-
-  if skills.ulti:CanLevelUp() then
-    skills.ulti:LevelUp()
-  elseif skills.whip:CanLevelUp() then
-    skills.whip:LevelUp()
-  elseif skills.hold:CanLevelUp() then
-    skills.hold:LevelUp()
-  elseif skills.show:CanLevelUp() then
-    skills.show:LevelUp()
-  else
-    skills.attributeBoost:LevelUp()
-  end
+    if unitSelf:GetAbilityPointsAvailable() <= 0 then
+        return
+    end
+    
+   
+    local nLev = unitSelf:GetLevel()
+    local nLevPts = unitSelf:GetAbilityPointsAvailable()
+    for i = nLev, nLev+nLevPts do
+        unitSelf:GetAbility( object.tSkills[i] ):LevelUp()
+    end
 end
 
 ------------------------------------------------------
