@@ -66,10 +66,10 @@ object.nVoodooUp = 70;
 
 -- Skillbuild table, 0=Hold, 1=Puppet Show, 2=Whiplash, 3=Voodoo, 4=Attri
 object.tSkills = {
-  2, 0, 2, 2, 2,
-  3, 1, 3, 1, 1,
-  3, 4, 4, 4, 4,
-  3, 4, 4, 4, 4,
+  2, 0, 2, 1, 2,
+  3, 2, 3, 0, 3,
+  1, 3, 1, 0, 1,
+  0, 4, 4, 4, 4,
   4, 4, 4, 4, 4,
 }
 
@@ -205,20 +205,26 @@ local function noPuppetExistsHarass(botBrain, unitTarget)
   local unitSelf = core.unitSelf
   local nTargetDistanceSq = getDistance2DSq(unitSelf, unitTarget)
   
-  if unitTarget:GetBehavior() and unitTarget:GetBehavior():GetType() then
-    BotEcho(unitTarget:GetBehavior():GetType())
-  end  
+  -- Get the cooldown on voodoo
+  local nVoodooCD = 9999
+  local voodoo = skills.voodoo 
+  if voodoo then
+    nVoodooCD = voodoo:GetActualRemainingCooldownTime()
+  end
   
+  -- Cast puppet show if the enemy is near some enemy and voodoo is on cooldown
   local abilShow = skills.show
   if abilShow and abilShow:CanActivate() then
+    local nCD = abilShow:GetCooldownTime()
     local nRange = abilShow: GetRange()
     local closestToTarget = getNearestUnit(botBrain, unitTarget, 400) --400 == radius of puppet show
-    if nTargetDistanceSq < (nRange * nRange) and closestToTarget then
+    if nCD < nVoodooCD and nTargetDistanceSq < (nRange * nRange) and closestToTarget then
       BotEcho("DANCE FOR ME")
       bActionTaken = core.OrderAbilityEntity(botBrain, abilShow, unitTarget)
     end
   end
   
+  -- Cast hold on enemy under 50% health
   if not bActionTaken and unitTarget:GetHealthPercent() < 50 then
     local abilHold = skills.hold
     if abilHold and abilHold:CanActivate() then
@@ -330,10 +336,16 @@ end
 -- Hold an nearby enemy hero while retreating
 function behaviorLib.CustomRetreatExecute(botBrain)
 
+  local unitSelf = core.unitSelf
+  -- Don't cast hold if on high HP
+  if unitSelf:GetHealthPercent() > 80 then
+    return false
+  end
+
+
   local abilHold = skills.hold
   local nRange = abilHold:GetRange()
 
-  local unitSelf = core.unitSelf
   local vecMyPosition = unitSelf:GetPosition()
 
   if abilHold and abilHold:CanActivate() then
@@ -345,7 +357,7 @@ function behaviorLib.CustomRetreatExecute(botBrain)
       local nTargetDistanceSq = Vector3.Distance2DSq(vecMyPosition, heroPos)
       if nTargetDistanceSq < (nRange * nRange / 2) then
         BotEcho("HOLDING!")
-        return core.OrderAbilityEntity(botBdistToTargetrain, abilHold, hero)
+        return core.OrderAbilityEntity(botBrain, abilHold, hero)
       end
 
     end
@@ -408,8 +420,12 @@ local function HarassHeroExecuteOverride(botBrain)
 
   local myPos = unitSelf: GetPosition()
 
-  local nRadius = 200 + skills.show:GetLevel() * 50
-  local nearestEnemy = getNearestUnit(botBrain, unitTarget, nRadius)
+  -- Cast voodoo is possible
+  local abilVoodoo = skills.voodoo
+  if abilVoodoo:CanActivate() then
+    BotEcho("VOODOO")
+    bActionTaken = core.OrderAbilityEntity(botBrain, abilVoodoo, unitTarget)
+  end
   
   local puppet = getPuppet(botBrain, unitTarget)
   
@@ -419,11 +435,6 @@ local function HarassHeroExecuteOverride(botBrain)
     bActionTaken = noPuppetExistsHarass(botBrain, unitTarget)
   end
 
-  local abilVoodoo = skills.voodoo
-  if abilVoodoo:CanActivate() then
-    BotEcho("VOODOO")
-    bActionTaken = core.OrderAbilityEntity(botBrain, abilVoodoo, unitTarget)
-  end
 
   if not bActionTaken then
     return object.harassExecuteOld(botBrain)
