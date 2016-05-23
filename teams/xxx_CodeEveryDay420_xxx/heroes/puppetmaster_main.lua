@@ -14,7 +14,7 @@ object.bAttackCommands = true
 object.bAbilityCommands = true
 object.bOtherCommands = true
 
-object.bReportBehavior = true
+object.bReportBehavior = false
 object.bDebugUtility = false
 object.bDebugExecute = false
 
@@ -136,7 +136,6 @@ local function getPuppet(botBrain, myPos)
 
   for _, enemy in pairs(tEnemies) do --If a puppet exists, set it as the target
     if enemy:GetTypeName() == "Pet_PuppetMaster_Ability4" then
-      BotEcho("FOUND PUPPET")
       return enemy
     end
   end
@@ -144,7 +143,6 @@ end
 
 -- Harass behavior when a puppet exists
 local function puppetExistsHarass(botBrain, unitTarget, puppet)
-  BotEcho("PUPPET HARASS")
 
   local bActionTaken = false;
   local unitSelf = core.unitSelf
@@ -198,7 +196,6 @@ end
 
 -- Harass behavior when a puppet doesn't exist
 local function noPuppetExistsHarass(botBrain, unitTarget)
-  BotEcho("NO PUPPET HARASS")
   object.puppetTarget = nil
 
   local bActionTaken = false;
@@ -212,9 +209,9 @@ local function noPuppetExistsHarass(botBrain, unitTarget)
     nVoodooCD = voodoo:GetActualRemainingCooldownTime()
   end
   
-  -- Cast puppet show if the enemy is near some enemy and voodoo is on cooldown
+  -- Cast puppet show if the enemy is near some enemy and voodoo is on cooldown. Don't cast if the enemy is held
   local abilShow = skills.show
-  if abilShow and abilShow:CanActivate() then
+  if abilShow and abilShow:CanActivate() and not unitTarget:HasState("State_PuppetMaster_Ability1") then
     local nCD = abilShow:GetCooldownTime()
     local nRange = abilShow: GetRange()
     local closestToTarget = getNearestUnit(botBrain, unitTarget, 400) --400 == radius of puppet show
@@ -224,8 +221,8 @@ local function noPuppetExistsHarass(botBrain, unitTarget)
     end
   end
   
-  -- Cast hold on enemy under 50% health
-  if not bActionTaken and unitTarget:GetHealthPercent() < 50 then
+  -- Cast hold on enemy under 50% health. Don't cast if the enemy has crazy puppet status
+  if not bActionTaken and unitTarget:GetHealthPercent() < 0.5 and not unitTarget:HasState("State_PuppetMaster_Ability2") then
     local abilHold = skills.hold
     if abilHold and abilHold:CanActivate() then
     
@@ -338,7 +335,7 @@ function behaviorLib.CustomRetreatExecute(botBrain)
 
   local unitSelf = core.unitSelf
   -- Don't cast hold if on high HP
-  if unitSelf:GetHealthPercent() > 80 then
+  if unitSelf:GetHealthPercent() > 0.8 then
     return false
   end
 
@@ -349,7 +346,6 @@ function behaviorLib.CustomRetreatExecute(botBrain)
   local vecMyPosition = unitSelf:GetPosition()
 
   if abilHold and abilHold:CanActivate() then
-    core.BotEcho("HOLD?")
 
     local tTargets = core.localUnits["EnemyHeroes"]
     for key, hero in pairs(tTargets) do
@@ -414,7 +410,6 @@ local function HarassHeroExecuteOverride(botBrain)
 
   local unitSelf = core.unitSelf
 
-  local nLastHarassUtility = behaviorLib.lastHarassUtil
   local bCanSee = core.CanSeeUnit(botBrain, unitTarget)
   local bActionTaken = false
 
