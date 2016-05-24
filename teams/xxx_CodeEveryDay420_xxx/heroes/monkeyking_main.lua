@@ -67,8 +67,8 @@ object.tSkills = {
   4, 4, 4, 4, 4,
 }
 
-behaviorLib.StartingItems = {"Item_LoggersHatchet", "Item_IronBuckler", "Item_RunesOfTheBlight"}
-behaviorLib.LaneItems     = {"Item_Bottle", "Item_EnhancedMarchers"}
+behaviorLib.StartingItems = {"Item_ManaBattery", "Item_LoggersHatchet", "Item_IronBuckler", "Item_RunesOfTheBlight"}
+behaviorLib.LaneItems     = {"Item_EnhancedMarchers", "Item_PowerSupply"}
 behaviorLib.MidItems      = {"Item_SolsBulwark", "Item_Stealth"}
 behaviorLib.LateItems     = {"Item_Pierce", "Item_Immunity", "Item_Sasuke", "Item_DaemonicBreastplate", "Item_Silence"}
 

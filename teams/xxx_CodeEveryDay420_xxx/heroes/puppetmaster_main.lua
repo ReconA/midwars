@@ -53,8 +53,8 @@ object.heroName = 'Hero_PuppetMaster'
 --Constants
 -----------------------------------
 
-behaviorLib.StartingItems  = { "Item_RunesOfTheBlight", "Item_MinorTotem", "Item_MinorTotem", "Item_MarkOfTheNovice", "Item_MarkOfTheNovice", "Item_HealthPotion"}
-behaviorLib.LaneItems  = {"Item_Marchers", "Item_Steamboots", "Item_HelmOfTheVictim"}
+behaviorLib.StartingItems  = {"Item_ManaBattery", "Item_MinorTotem", "Item_MinorTotem", "Item_MarkOfTheNovice", "Item_MarkOfTheNovice", "Item_HealthPotion"}
+behaviorLib.LaneItems  = {"Item_PowerSupply", "Item_Marchers", "Item_Steamboots", "Item_HelmOfTheVictim"}
 behaviorLib.MidItems = {"Item_WhisperingHelm"}
 behaviorLib.LateItems = {"Item_Lightning1"} 
 
@@ -370,16 +370,16 @@ end
 -- @param: IunitEntity hero
 -- @return: number
 local function CustomHarassUtilityFnOverride(hero)
-  local nUtil = 0
 
   if skills.voodoo:CanActivate() or object.puppetTarget then
     return object.nVoodooUp
   end
 
+  local nUtil = 0
+  
   if skills.whip:GetCharges() == 1 then
     nUtil = nUtil + object.nFullWhip
   end
-
 
   if skills.hold:CanActivate() then
     nUtil = nUtil + object.nHoldUp
@@ -425,7 +425,6 @@ local function HarassHeroExecuteOverride(botBrain)
   
   if not bActionTaken then
     local puppet = getPuppet(botBrain, unitTarget)
-
     if puppet then
       bActionTaken = puppetExistsHarass(botBrain, unitTarget, puppet)
     else
