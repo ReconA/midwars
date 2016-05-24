@@ -297,11 +297,10 @@ end
 
 local function ComboVault(botBrain) 
   
-  local vault = skills.vault  local nDistSqrd = getDistance2DSq(core.unitSelf,comboTarget)
+  local vault = skills.vault  
   local bContinue = false
   
   if vault and vault:CanActivate() and comboTarget then
-    local targetPos = comboTarget:GetPosition()
     local unitSelf = core.unitSelf
     
     local nRange = vault:GetRange()
@@ -309,7 +308,7 @@ local function ComboVault(botBrain)
     
     if nDistanceSqrd < (nRange * nRange) then
       BotEcho("VAULT!")
-      bContinue =  core.OrderAbilityEntity(botBrain, vault, comboTarget)
+      bContinue = core.OrderAbilityEntity(botBrain, vault, comboTarget)
     end
     
   end
@@ -381,11 +380,11 @@ local function ComboExecute(botBrain)
   
   if bContinue then
     comboCounter = comboCounter + 1
---  else   
---    local bAttack = ComboAutoAttack(botBrain)
---    if not bAttack then
---      ComboMove(botBrain)
---    end
+  else   
+    local bAttack = ComboAutoAttack(botBrain)
+    if not bAttack then
+      ComboMove(botBrain)
+    end
   end
   
   return bContinue
@@ -420,12 +419,7 @@ local function HarassHeroExecuteOverride(botBrain)
   local bActionTaken = false
   
   if IsComboReady() then
-    if not comboTarget then
-      comboTarget = DetermineComboTarget()
-    end
-    if comboTarget then
-      bActionTaken = ComboExecute(botBrain)
-    end
+    bActionTaken = ComboExecute(botBrain)
   end
   
   if not bActionTaken then
@@ -482,6 +476,37 @@ local function PushExecuteFix(botBrain)
   end
 end
 behaviorLib.PushBehavior["Execute"] = PushExecuteFix
+
+--------------------------------
+--Custom Vault Retreat Behavior
+--------------------------------
+
+local function VaultTarget(botBrain)
+  local vault = skills.vault
+  local target = nil
+  local distance = 0
+  local myPos = core.unitSelf:GetPosition()
+  local mainPos = core.allyMainBaseStructure:GetPosition()
+  local unitsNearby = core.AssessLocalUnits(botBrain, myPos, vault:GetRange())
+  local fromMain = Vector3.Distance2DSq(myPos, mainPos)
+    for id, obj in pairs(unitsNearby.Allies) do
+    local fromMainObj = Vector3.Distance2DSq(mainPos, obj:GetPosition())
+    if(fromMainObj < fromMain and fromMainObj > distance and Vector3.Distance2D(myPos, obj:GetPosition()) > 150) then
+      distance = fromMainObj
+      target = obj
+    end
+  end
+  return target
+end
+
+function behaviorLib.CustomRetreatExecute(botBrain)
+  local vault = skills.vault
+  local target = VaultTarget(botBrain)
+  if core.unitSelf:GetHealthPercent() < 0.40 and pole and vault:CanActivate() and target and Vector3.Distance2D(target:GetPosition(), core.allyWell:GetPosition()) > 2000 then
+    return core.OrderAbilityEntity(botBrain, vault, target)
+  end
+  return false
+end
 
 
 
