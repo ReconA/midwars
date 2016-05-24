@@ -14,7 +14,7 @@ object.bAttackCommands = true
 object.bAbilityCommands = true
 object.bOtherCommands = true
 
-object.bReportBehavior = false
+object.bReportBehavior = true
 object.bDebugUtility = false
 object.bDebugExecute = false
 
@@ -33,8 +33,9 @@ runfile "bots/botbraincore.lua"
 runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
+runfile "bots/teams/default/generics.lua"
 
-local core, eventsLib, behaviorLib, metadata, skills = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills
+local core, eventsLib, behaviorLib, metadata, skills, generics = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills, object.generics
 
 local print, ipairs, pairs, string, table, next, type, tinsert, tremove, tsort, format, tostring, tonumber, strfind, strsub
   = _G.print, _G.ipairs, _G.pairs, _G.string, _G.table, _G.next, _G.type, _G.table.insert, _G.table.remove, _G.table.sort, _G.string.format, _G.tostring, _G.tonumber, _G.string.find, _G.string.sub
@@ -48,6 +49,13 @@ BotEcho('loading nymphora_main...')
 
 object.heroName = 'Hero_Fairy'
 
+
+behaviorLib.StartingItems = {"Item_ManaBattery", "Item_PretendersCrown", "Item_HealthPotion", "Item_RunesOfTheBlight"}
+behaviorLib.LaneItems = {"Item_Marchers", "Item_Intelligence5", "Item_Replenish", "Item_Soultrap", "Item_PlatedGreaves"}
+behaviorLib.MidItems = {"Item_Astrolabe", "Item_Lightning1"}
+behaviorLib.LateItems = {"Item_BehemothsHeart"}
+
+
 --------------------------------
 -- Lanes
 --------------------------------
@@ -56,6 +64,14 @@ core.tLanePreferences = {Jungle = 0, Mid = 0, ShortSolo = 0, LongSolo = 0, Short
 --------------------------------
 -- Skills
 --------------------------------
+-- Skillbuild table, 0=q, 1=w, 2=e, 3=r, 4=attri
+object.tSkills = {
+  2, 1, 0, 1, 2,
+  3, 2, 2, 0, 0,
+  0, 3, 1, 1, 4,
+  3, 4, 4, 4, 4,
+  4, 4, 4, 4, 4
+}
 local bSkillsValid = false
 function object:SkillBuild()
   local unitSelf = self.core.unitSelf
@@ -74,50 +90,188 @@ function object:SkillBuild()
     end
   end
 
-  if unitSelf:GetAbilityPointsAvailable() <= 0 then
+  local nPoints = unitSelf:GetAbilityPointsAvailable()
+  if nPoints <= 0 then
     return
   end
 
-  if skills.ulti:CanLevelUp() then
-    skills.ulti:LevelUp()
-  elseif skills.heal:CanLevelUp() then
-    skills.heal:LevelUp()
-  elseif skills.mana:CanLevelUp() then
-    skills.mana:LevelUp()
-  elseif skills.stun:CanLevelUp() then
-    skills.stun:LevelUp()
-  else
-    skills.attributeBoost:LevelUp()
+  local nLevel = unitSelf:GetLevel()
+  for i = nLevel, (nLevel + nPoints) do
+    unitSelf:GetAbility( self.tSkills[i] ):LevelUp()
   end
 end
 
-------------------------------------------------------
---            onthink override                      --
--- Called every bot tick, custom onthink code here  --
-------------------------------------------------------
--- @param: tGameVariables
--- @return: none
-function object:onthinkOverride(tGameVariables)
-  self:onthinkOld(tGameVariables)
+--------------------------------------------------------------
+--                    Harass Behavior                       --
+--------------------------------------------------------------
 
-  -- custom code here
+local function HarassHeroExecuteOverride(botBrain)
+  local unitTarget = behaviorLib.heroTarget
+  if unitTarget == nil or not unitTarget:IsValid() then
+    return false --can not execute, move on to the next behavior
+  end
+
+  local unitSelf = core.unitSelf
+  local nTargetDistanceSq = Vector3.Distance2DSq(unitSelf:GetPosition(), unitTarget:GetPosition())
+  local bActionTaken = false
+
+  if core.CanSeeUnit(botBrain, unitTarget) then
+    local stun = skills.stun
+    if stun:CanActivate() and core.unitSelf:GetMana() > 50 then
+      local nRange = stun:GetRange()
+      if nTargetDistanceSq < (nRange * nRange) then
+        bActionTaken = core.OrderAbilityPosition(botBrain, stun, unitTarget:GetPosition())
+      else
+        bActionTaken = core.OrderMoveToUnitClamp(botBrain, unitSelf, unitTarget)
+      end
+    end
+  end
+  if not bActionTaken then
+    return core.harassExecuteOld(botBrain)
+  end
 end
-object.onthinkOld = object.onthink
-object.onthink = object.onthinkOverride
+core.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
+behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
-----------------------------------------------
---            oncombatevent override        --
--- use to check for infilictors (fe. buffs) --
-----------------------------------------------
--- @param: eventdata
--- @return: none
-function object:oncombateventOverride(EventData)
-  self:oncombateventOld(EventData)
+local function CustomHarassUtilityFnOverride(target)
+  local nUtility = 20
 
-  -- custom code here
+  if target:IsStunned() then
+    nUtility = nUtility + 30
+  end
+
+  return generics.CustomHarassUtility(target) + nUtility
 end
--- override combat event trigger function.
-object.oncombateventOld = object.oncombatevent
-object.oncombatevent = object.oncombateventOverride
+behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
+--------------------------------------------------------------
+--                    Creep attack Behavior                 --
+--------------------------------------------------------------
+
+local function AttackCreepsExecuteOverride(botBrain)
+  local bActionTaken = false
+  local heal = skills.heal
+  local unitSelf = core.unitSelf
+  local unitsNearby = core.AssessLocalUnits(botBrain, unitSelf:GetPosition(), 900)
+  local creeps = unitsNearby.EnemyCreeps
+  if heal:CanActivate() and core.NumberElements(creeps) > 2 then
+    core.BotEcho("Healbomb")
+    bActionTaken = core.OrderAbilityPosition(botBrain, heal, HoN.GetGroupCenter(creeps))
+  end
+
+  if not bActionTaken then
+    return core.AttackCreepsExecuteOld(botBrain)
+  end
+end
+core.AttackCreepsExecuteOld = behaviorLib.AttackCreepsBehavior["Execute"]
+behaviorLib.AttackCreepsBehavior["Execute"] = AttackCreepsExecuteOverride
+
+--------------------------------------------------------------
+--                    Teleport Behavior                     --
+--------------------------------------------------------------
+
+function behaviorLib.CustomHealAtWellExecute(botBrain)
+ local ulti = skills.ulti
+ local bActionTaken = false
+ local wellPos = (core.allyWell and core.allyWell:GetPosition())
+ local unitsNearby = core.AssessLocalUnits(botBrain, core.unitSelf, 600)
+ local heroes = unitsNearby.AllyHeroes
+
+ if ulti:CanActivate() and core.NumberElements(heroes) < 1 and Vector3.Distance2DSq(core.unitSelf:GetPosition(), wellPos) > 1000 * 1000 then
+   bActionTaken = core.OrderAbilityPosition(botBrain, ulti, wellPos)
+ end
+
+ if core.unitSelf:IsChanneling() then
+   return true
+ end
+
+ return bActionTaken
+end
+--------------------------------------------------------------
+--                    Mana Methods                          --
+--------------------------------------------------------------
+local manaTarget = nil
+local function FindManaTarget(botBrain, mana)
+  if core.unitSelf:GetManaPercent() < 0.6 then
+    return core.unitSelf
+  end
+  local range = mana:GetRange()
+  local unitsNearby = core.AssessLocalUnits(botBrain, core.unitSelf, range)
+  local heroes = unitsNearby.AllyHeroes
+  local target = nil
+  local missing = 0
+  for _, hero in pairs(heroes) do
+    local curMissing = 1 - hero:GetManaPercent()
+    if curMissing > missing then
+      missing = curMissing
+      target = hero
+    end
+  end
+  return target
+end
+
+local function ManaUtility(botBrain)
+  local mana = skills.mana
+  manaTarget = FindManaTarget(botBrain, mana)
+  if mana:CanActivate() and manaTarget then
+     return 50
+  end
+  return 0
+end
+
+local function ManaExecute(botBrain)
+  local mana = skills.mana
+  if mana and mana:CanActivate() then
+    return core.OrderAbilityEntity(botBrain, mana, manaTarget)
+  end
+  return false
+end
+local ManaBehavior = {}
+ManaBehavior["Utility"] = ManaUtility
+ManaBehavior["Execute"] = ManaExecute
+ManaBehavior["Name"] = "Mana"
+tinsert(behaviorLib.tBehaviors, ManaBehavior)
+
+--------------------------------------------------------------
+--                    Heal Methods                          --
+--------------------------------------------------------------
+local healTarget = nil
+local function FindHealTarget(botBrain, heal)
+  local range = heal:GetRange()
+  local unitsNearby = core.AssessLocalUnits(botBrain, core.unitSelf, range)
+  local heroes = unitsNearby.AllyHeroes
+  tinsert(heroes, core.unitSelf)
+  local target = nil
+  local missing = 0.2
+  for _, hero in pairs(heroes) do
+    local curMissing = 1 - hero:GetHealthPercent()
+    if curMissing > missing then
+      missing = curMissing
+      target = hero
+    end
+  end
+  return target
+end
+local function HealUtility(botBrain)
+  local heal = skills.heal
+  healTarget = FindHealTarget(botBrain, heal)
+  if heal:CanActivate() and healTarget and core.unitSelf:GetManaPercent() > 0.2 then
+     return 50
+  end
+  return 0
+end
+
+local function HealExecute(botBrain)
+  local heal = skills.heal
+  if heal and heal:CanActivate() then
+    core.BotEcho("Healing")
+    return core.OrderAbilityPosition(botBrain, heal, healTarget:GetPosition())
+  end
+  return false
+end
+local HealBehavior = {}
+HealBehavior["Utility"] = HealUtility
+HealBehavior["Execute"] = HealExecute
+HealBehavior["Name"] = "Mana"
+tinsert(behaviorLib.tBehaviors, HealBehavior)
 
 BotEcho('finished loading nymphora_main')

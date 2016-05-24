@@ -52,7 +52,7 @@ object.heroName = 'Hero_Valkyrie'
 
 
 behaviorLib.StartingItems = {"Item_RunesOfTheBlight", "Item_ManaRegen3"}
-behaviorLib.LaneItems = {"Item_Marchers", "Item_Steamboots"}
+behaviorLib.LaneItems = {"Item_Marchers", "Item_Intelligence5", "Item_Regen", "Item_Steamboots"}
 behaviorLib.MidItems = {"Item_TrinketOfRestoration", "Item_HungrySpirit", "Item_LifeSteal5", "Item_Pierce"}
 behaviorLib.LateItems = {"Item_Sicarus", "Item_PretendersCrown", "Item_Dawnbringer"}
 
@@ -163,34 +163,6 @@ function behaviorLib.CustomRetreatExecute(botBrain)
   return false
 end
 
-local function PushUtilityOverride(botBrain)
-  local utility = 5
-  local enemiesDeadUtil = behaviorLib.EnemiesDeadPushUtility(core.enemyTeam)
-  local pushingStrUtil = behaviorLib.PushingStrengthUtility(core.unitSelf)
-  local nTeamPushUtility = behaviorLib.TeamPushUtility()
-  core.BotEcho("asdf")
-  local unitSelf = core.unitSelf
-  local unitsNearby = core.AssessLocalUnits(botBrain, unitSelf:GetPosition(), 500)
-
-  enemiesDeadUtil = enemiesDeadUtil * behaviorLib.enemiesDeadUtilMul
-  pushingStrUtil = pushingStrUtil * behaviorLib.pushingStrUtilMul
-  nTeamPushUtility = nTeamPushUtility * behaviorLib.nTeamPushUtilityMul
-
-  utility = enemiesDeadUtil + pushingStrUtil + nTeamPushUtility
-  utility = Clamp(utility, 0, behaviorLib.pushingCap)
-
-  if core.NumberElements(unitsNearby.EnemyHeroes) then
-    utility = 30
-  end
-
-  if botBrain.bDebugUtility == true and utility ~= 0 then
-    BotEcho(format("  PushUtility: %g", utility))
-  end
-  return utility
-end
-behaviorLib.PushUtility = PushUtilityOverride
-
-
 local function CustomHarassUtilityFnOverride(target)
   local nUtility = 0
   if target:IsStunned() then
@@ -212,8 +184,6 @@ local function HarassHeroExecuteOverride(botBrain)
   end
 
   local unitSelf = core.unitSelf
-
-
   local bActionTaken = false
 
   local call = skills.call
