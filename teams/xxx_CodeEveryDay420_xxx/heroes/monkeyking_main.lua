@@ -502,13 +502,42 @@ end
 function behaviorLib.CustomRetreatExecute(botBrain)
   local vault = skills.vault
   local target = VaultTarget(botBrain)
-  if core.unitSelf:GetHealthPercent() < 0.40 and pole and vault:CanActivate() and target and Vector3.Distance2D(target:GetPosition(), core.allyWell:GetPosition()) > 2000 then
-    return core.OrderAbilityEntity(botBrain, vault, target)
+  local bUsedSkill = false
+  local unitSelf = core.unitSelf
+  local bLowHp = unitSelf:GetHealthPercent() < 0.40
+  
+  if bLowHp and vault and vault:CanActivate() and target and Vector3.Distance2D(target:GetPosition(), core.allyWell:GetPosition()) > 2000 then
+    bUsedSkill = core.OrderAbilityEntity(botBrain, vault, target)
+  end
+  
+  if not bUsedSkill then
+    local dash = skills.dash
+    local angle = core.HeadingDifference(unitSelf, core.allyMainBaseStructure:GetPosition())
+    if bLowHp and dash and dash:CanActivate() and angle < 0.5 then
+      bUsedSkill = core.OrderAbility(botBrain, dash)
+    end
+  end
+  
+  return bUsedSkill
+end
+
+function behaviorLib.CustomRetreatExecute(botBrain)
+  local leap = skills.leap
+  local unitSelf = core.unitSelf
+  local unitsNearby = core.AssessLocalUnits(botBrain, unitSelf:GetPosition(), 500)
+
+  if unitSelf:GetHealthPercent() < 0.3 and core.NumberElements(unitsNearby.EnemyHeroes) > 0 then
+    local ulti = skills.ulti
+    if ulti and ulti:CanActivate() then
+      return core.OrderAbility(botBrain, ulti)
+    end
+    local angle = core.HeadingDifference(unitSelf, core.allyMainBaseStructure:GetPosition())
+    if leap and leap:CanActivate() and angle < 0.5 then
+      return core.OrderAbility(botBrain, leap)
+    end
   end
   return false
 end
-
-
 
 BotEcho('finished loading monkeyking_main')
 
