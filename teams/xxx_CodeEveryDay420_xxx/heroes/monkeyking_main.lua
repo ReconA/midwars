@@ -73,12 +73,14 @@ behaviorLib.MidItems      = {"Item_SolsBulwark", "Item_Stealth"}
 behaviorLib.LateItems     = {"Item_Pierce", "Item_Immunity", "Item_Sasuke", "Item_DaemonicBreastplate", "Item_Silence"}
 
 --------------------------------
---Combo variables
+-- Utility constants
 --------------------------------
-object.nComboCounter = 0  -- What stage of the combo we are in
-object.nComboReady  = 70  -- How much utility from a ready combo
-object.nMidCombo    = 80  -- How much utility from being mid combo
-object.nComboDuration = 7000 --Combo counter will reset after this time (milliseconds)
+object.nComboReady  = 60  -- How much utility from a ready combo
+object.nMidCombo    = 70  -- How much utility from being mid combo
+
+object.nDashReady   = 15
+object.nVaultReady  = 15
+object.nSlamReady   = 15
 
 --------------------------------
 -- Skills
@@ -123,40 +125,6 @@ local function getDistance2DSq(unit1, unit2)
 end
 
 
--- Loaned from master depository generics ^_^
-function IsFreeLine(pos1, pos2)
-  local tAllies = core.CopyTable(core.localUnits["AllyUnits"])
-  local tEnemies = core.CopyTable(core.localUnits["EnemyCreeps"])
-  local distanceLine = Vector3.Distance2DSq(pos1, pos2)
-  local x1, x2, y1, y2 = pos1.x, pos2.x, pos1.y, pos2.y
-  local spaceBetween = 50 * 50
-  for _, ally in pairs(tAllies) do
-    if ally then
-      local posAlly = ally:GetPosition()
-      if posAlly then
-        local x3, y3 = posAlly.x, posAlly.y
-        local calc = x1*y2 - x2*y1 + x2*y3 - x3*y2 + x3*y1 - x1*y3
-        local calc2 = calc * calc
-        local actual = calc2 / distanceLine
-        if actual < spaceBetween then
-          return false
-        end
-      end
-    end
-  end
-  for _, creep in pairs(tEnemies) do
-    local posCreep = creep:GetPosition()
-    local x3, y3 = posCreep.x, posCreep.y
-    local calc = x1*y2 - x2*y1 + x2*y3 - x3*y2 + x3*y1 - x1*y3
-    local calc2 = calc * calc
-    local actual = calc2 / distanceLine
-    if actual < spaceBetween then
-      return false
-    end
-  end
-  return true
-end
-
 
 ------------------------------------------------------
 --            onthink override                      --
@@ -197,7 +165,19 @@ local function CustomHarassUtilityFnOverride(hero)
 
   local dash, vault, slam = skills.dash, skills.vault, skills.slam
   if dash and vault and slam and dash:CanActivate() and vault:CanActivate() and slam:CanActivate() then
-    nUtil = 60
+    return object.nComboReady - 10
+  end
+  
+  if skills.dash and skills.dash:CanActivate() then
+    nUtil = nUtil + object.nDashReady
+  end
+
+  if skills.vault and skills.vault:CanActivate() then
+    nUtil = nUtil + object.nVaultReady
+  end
+
+  if skills.slam and skills.slam:CanActivate() then
+    nUtil = nUtil + object.nSlamReady
   end
 
   return nUtil
@@ -205,18 +185,36 @@ end
 -- assign custom Harrass function to the behaviourLib object
 behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 
-
 --------------------------------------------------------------
 --                    Combo Behavior                       
 -- Combo should be Dash - Slam - Vault - Dash - Vault  (Q E W Q W)
---
+-- and some autoattacks. 
 --------------------------------------------------------------
 
-local function DetermineComboTarget(dash)
+-- Combo variables
+local comboTarget = nil
+local comboCounter = 0
+local autoAttacks = 0   -- We can add a few autoattack mid-combo
+local comboStartTime = nil
+local comboEndRange = 400 * 400
+local comboDuration = 7000 --Combo counter will reset after this time (milliseconds)
+
+local function IsComboReady()
+  local bIsReady = false
+  --TODO: Mana
+  local dash, vault, slam = skills.dash, skills.vault, skills.slam
+  if dash and vault and slam and dash:CanActivate() and vault:CanActivate() and slam:CanActivate() then
+    bIsReady = true
+  end
+  
+  return bIsReady
+end
+
+local function DetermineComboTarget()
 
   local tLocalEnemies = core.CopyTable(core.localUnits["EnemyHeroes"])
-  local maxDistance = dash:GetRange()
-  local maxDistanceSq = maxDistance * maxDistance
+  local maxDistance = 300
+  local maxDistanceSq = maxDistance * maxDistance + 300
   local myPos = core.unitSelf:GetPosition()
   local unitTarget = nil
   local distanceTarget = 9999999
@@ -225,7 +223,7 @@ local function DetermineComboTarget(dash)
     local enemyPos = unitEnemy:GetPosition()
     local distanceEnemy = Vector3.Distance2DSq(myPos, enemyPos)
     if distanceEnemy < maxDistanceSq then
-      if distanceEnemy < distanceTarget and IsFreeLine(myPos, enemyPos) then
+      if distanceEnemy < distanceTarget then
         unitTarget = unitEnemy
         distanceTarget = distanceEnemy
       end
@@ -234,25 +232,32 @@ local function DetermineComboTarget(dash)
   return unitTarget
 end
 
-local comboTarget = nil
-local comboCounter = 0
-local comboStartTime = nil
+
 
 local function ComboUtility(botBrain)
   local nTime = HoN.GetGameTime()
-  if comboStartTime and nTime - comboStartTime > object.nComboDuration then -- Combo started some time ago, so time to stop
+  if comboStartTime and nTime - comboStartTime > comboDuration then -- Combo started some time ago, so time to stop
     comboStartTime = nil
     comboCounter = 0
     return 0  
   end
-
-  if comboCounter > 0 then
+  
+  if comboTarget then 
+    local nDistSqrd = getDistance2DSq(core.unitSelf,comboTarget)
+    if nDistSqrd > comboEndRange then
+       comboStartTime = nil
+       comboCounter = 0
+      return 0
+    end
+  end
+  
+  if comboCounter > 0 or comboTarget then
     return object.nMidCombo
   end
   
   local dash, vault, slam = skills.dash, skills.vault, skills.slam
   if dash and vault and slam and dash:CanActivate() and vault:CanActivate() and slam:CanActivate() then
-    comboTarget = DetermineComboTarget(dash)
+    comboTarget = DetermineComboTarget()
     if comboTarget then
       return object.nComboReady
     end
@@ -262,6 +267,8 @@ local function ComboUtility(botBrain)
 end
 
 local function ComboDash(botBrain)
+
+  BotEcho("DASH?")
   local dash = skills.dash
   local bContinue = false
   
@@ -269,12 +276,14 @@ local function ComboDash(botBrain)
     local targetPos = comboTarget:GetPosition()
     local unitSelf = core.unitSelf
     local myPos = unitSelf:GetPosition()
-    local nDistanceSqrd = getDistance2DSq(unitSelf, comboTarget)
-    local bFreeLine = IsFreeLine(myPos, targetPos)
+    local nDistanceSqrd = Vector3.Distance2DSq(myPos, targetPos)
     local nFacing = core.HeadingDifference(unitSelf, targetPos)
     local nRange = dash:GetRange()
 
-    if nDistanceSqrd < (nRange * nRange) and nFacing < 0.3 then
+    BotEcho("Facing:" .. nFacing)
+    BotEcho("Distance: " .. nDistanceSqrd)
+    BotEcho("Dash range: " .. (nRange * nRange))
+    if nDistanceSqrd < (nRange * nRange) and nFacing < 0.4 then
       BotEcho("DASH!")
       bContinue = core.OrderAbility(botBrain, dash)
       if not comboStartTime then
@@ -287,9 +296,8 @@ local function ComboDash(botBrain)
 end
 
 local function ComboVault(botBrain) 
-  BotEcho("VAULT?")
   
-  local vault = skills.vault
+  local vault = skills.vault  local nDistSqrd = getDistance2DSq(core.unitSelf,comboTarget)
   local bContinue = false
   
   if vault and vault:CanActivate() and comboTarget then
@@ -310,7 +318,6 @@ local function ComboVault(botBrain)
 end
 
 local function ComboSlam(botBrain)
-  BotEcho("SLAM?")
   local slam = skills.slam
   local bContinue = false
   
@@ -329,24 +336,59 @@ local function ComboSlam(botBrain)
   return bContinue
 end
 
+-- Autoattack mid-combo
+local function ComboAutoAttack(botBrain)
+  BotEcho("MID COMBO AUTOATTACK")
+  local bAttack = false
+  local unitSelf = core.unitSelf
+  if comboTarget and core.IsUnitInRange(unitSelf, comboTarget) then
+    bAttack = core.OrderAttack(botBrain, unitSelf, comboTarget)
+  end
+  
+  return bAttack
+end
+
+-- Move towards combo target
+local function ComboMove(botBrain)
+  BotEcho("MID COMBO MOVE")
+  local unitSelf = core.unitSelf  
+  if comboTarget then
+    core.OrderMoveToUnit(botBrain, unitSelf, comboTarget)  
+  end
+end
+
+-- Combo should be Dash - Slam - Vault - Dash - Vault  (Q E W Q W)
 local function ComboExecute(botBrain)  
-  local slam = skills.slam
+  BotEcho("COMBO EXECUTE")
+  comboTarget = DetermineComboTarget()
   
   local bContinue = false
   
   if comboCounter == 0 or comboCounter == 3 then
     bContinue = ComboDash(botBrain)
   elseif comboCounter == 1 then
-    bContinue = ComboVault(botBrain)
+--    if autoAttacks < 1 then
+--      ComboAutoAttack(botBrain)
+--      autoAttacks = autoAttacks + 1
+--    else
+--      bContinue = ComboSlam(botBrain)
+--    end
+      bContinue = ComboSlam(botBrain)
   elseif comboCounter == 2 or comboCounter == 4 then
-    bContinue = ComboSlam(botBrain)
-  else   
-    --TODO: What to do mid combo if right now skill can't be cast?
+    autoAttacks = 0
+    bContinue = ComboVault(botBrain)
   end
   
   if bContinue then
     comboCounter = comboCounter + 1
+--  else   
+--    local bAttack = ComboAutoAttack(botBrain)
+--    if not bAttack then
+--      ComboMove(botBrain)
+--    end
   end
+  
+  return bContinue
 end
 
 
@@ -376,12 +418,16 @@ local function HarassHeroExecuteOverride(botBrain)
 
   local unitSelf = core.unitSelf  
   local bActionTaken = false
-
-  local myPos = unitSelf: GetPosition()
-  local targetPos =  unitTarget:GetPosition()
-
-
-
+  
+  if IsComboReady() then
+    if not comboTarget then
+      comboTarget = DetermineComboTarget()
+    end
+    if comboTarget then
+      bActionTaken = ComboExecute(botBrain)
+    end
+  end
+  
   if not bActionTaken then
     return object.harassExecuteOld(botBrain)
   end
@@ -389,8 +435,8 @@ local function HarassHeroExecuteOverride(botBrain)
 end
 
 -- overload the behaviour stock function with the new
---object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
---behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
+object.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
+behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
 
 --------------------------------
@@ -428,7 +474,6 @@ local function PushExecuteFix(botBrain)
     local vecDesiredPos = behaviorLib.PositionSelfLogic(botBrain)
     if vecDesiredPos then
       bActionTaken = behaviorLib.MoveExecute(botBrain, vecDesiredPos)
-
     end
   end
 
