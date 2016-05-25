@@ -53,15 +53,16 @@ object.heroName = 'Hero_PuppetMaster'
 --Constants
 -----------------------------------
 
-behaviorLib.StartingItems  = { "Item_RunesOfTheBlight", "Item_MinorTotem", "Item_MinorTotem", "Item_MarkOfTheNovice", "Item_MarkOfTheNovice", "Item_HealthPotion"}
-behaviorLib.LaneItems  = {"Item_Marchers", "Item_Steamboots", "Item_HelmOfTheVictim"}
+behaviorLib.StartingItems  = {"Item_ManaBattery", "Item_MinorTotem", "Item_MinorTotem", "Item_MarkOfTheNovice", "Item_MarkOfTheNovice", "Item_HealthPotion"}
+behaviorLib.LaneItems  = {"Item_PowerSupply", "Item_Marchers", "Item_Steamboots", "Item_HelmOfTheVictim"}
 behaviorLib.MidItems = {"Item_WhisperingHelm"}
+behaviorLib.LateItems = {"Item_Lightning1"} 
 
 
 -- Harass up from ready skills
 object.nHoldUp   = 10;
-object.nFullWhip = 30;
-object.nVoodooUp = 70;
+object.nFullWhip = 15;
+object.nVoodooUp = 60;
 
 
 -- Skillbuild table, 0=Hold, 1=Puppet Show, 2=Whiplash, 3=Voodoo, 4=Attri
@@ -82,7 +83,7 @@ object.puppetTarget = nil
 --------------------------------
 -- Lanes
 --------------------------------
-core.tLanePreferences = {Jungle = 1, Mid = 5, ShortSolo = 4, LongSolo = 1, ShortSupport = 1, LongSupport = 1, ShortCarry = 4, LongCarry = 3}
+core.tLanePreferences = {Jungle = 0, Mid = 2, ShortSolo = 2, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 4, LongCarry = 3}
 
 ------------------------
 --Local functions
@@ -131,7 +132,7 @@ end
 
 -- Get the voodoo puppet
 local function getPuppet(botBrain, myPos)
-  local nRadius = 600
+  local nRadius = 900
   local tEnemies = core.AssessLocalUnits(botBrain, myPos, nRadius).Enemies
 
   for _, enemy in pairs(tEnemies) do --If a puppet exists, set it as the target
@@ -158,7 +159,6 @@ local function puppetExistsHarass(botBrain, unitTarget, puppet)
       unitTarget = object.puppetTarget
       local nTargetDistanceSq = getDistance2DSq(unitSelf, unitTarget) 
       local nMyRange = unitSelf:GetAttackRange()
-
       if nTargetDistanceSq > (nMyRange * nMyRange) then
         BotEcho("HOLD ON PUPPET")
         bActionTaken = core.OrderAbilityEntity(botBrain, abilHold, puppet)
@@ -370,14 +370,15 @@ end
 -- @param: IunitEntity hero
 -- @return: number
 local function CustomHarassUtilityFnOverride(hero)
-  local nUtil = 0
-
-  if skills.whip:GetCharges() == 1 then
-    nUtil = nUtil + object.nFullWhip
-  end
 
   if skills.voodoo:CanActivate() or object.puppetTarget then
-    nUtil = nUtil + object.nVoodooUp
+    return object.nVoodooUp
+  end
+
+  local nUtil = 0
+  
+  if skills.whip:GetCharges() == 1 then
+    nUtil = nUtil + object.nFullWhip
   end
 
   if skills.hold:CanActivate() then
@@ -422,14 +423,14 @@ local function HarassHeroExecuteOverride(botBrain)
     bActionTaken = core.OrderAbilityEntity(botBrain, abilVoodoo, unitTarget)
   end
   
-  local puppet = getPuppet(botBrain, unitTarget)
-  
-  if puppet then
-    bActionTaken = puppetExistsHarass(botBrain, unitTarget, puppet)
-  else
-    bActionTaken = noPuppetExistsHarass(botBrain, unitTarget)
+  if not bActionTaken then
+    local puppet = getPuppet(botBrain, unitTarget)
+    if puppet then
+      bActionTaken = puppetExistsHarass(botBrain, unitTarget, puppet)
+    else
+      bActionTaken = noPuppetExistsHarass(botBrain, unitTarget)
+    end
   end
-
 
   if not bActionTaken then
     return object.harassExecuteOld(botBrain)
