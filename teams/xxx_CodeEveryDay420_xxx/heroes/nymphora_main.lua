@@ -50,9 +50,9 @@ BotEcho('loading nymphora_main...')
 object.heroName = 'Hero_Fairy'
 
 
-behaviorLib.StartingItems = {"Item_ManaBattery", "Item_PretendersCrown", "Item_HealthPotion", "Item_RunesOfTheBlight"}
-behaviorLib.LaneItems = {"Item_Marchers", "Item_Intelligence5", "Item_Replenish", "Item_Soultrap", "Item_PlatedGreaves"}
-behaviorLib.MidItems = {"Item_Astrolabe", "Item_Lightning1"}
+behaviorLib.StartingItems = {"Item_ManaRegen3", "Item_HealthPotion",}
+behaviorLib.LaneItems = {"Item_ManaBattery", "Item_Marchers", "Item_PowerSupply", "Item_Intelligence5", "Item_Replenish", "Item_Soultrap"}
+behaviorLib.MidItems = {"Item_PlatedGreaves", "Item_Astrolabe", "Item_NomesWisdom", "Item_JadeSpire"}
 behaviorLib.LateItems = {"Item_BehemothsHeart"}
 
 
@@ -273,5 +273,13 @@ HealBehavior["Utility"] = HealUtility
 HealBehavior["Execute"] = HealExecute
 HealBehavior["Name"] = "Mana"
 tinsert(behaviorLib.tBehaviors, HealBehavior)
+
+--------------------------------------------------------------
+--                    Using Courier                         --
+--------------------------------------------------------------
+local function ShopUtilityOverride(botBrain)
+
+end
+
 
 BotEcho('finished loading nymphora_main')
