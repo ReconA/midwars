@@ -48,7 +48,6 @@ BotEcho('loading puppetmaster_main...')
 
 object.heroName = 'Hero_PuppetMaster'
 
-
 -----------------------------------
 --Constants
 -----------------------------------
@@ -58,11 +57,10 @@ behaviorLib.LaneItems  = {"Item_PowerSupply", "Item_Marchers", "Item_Steamboots"
 behaviorLib.MidItems = {"Item_WhisperingHelm"}
 behaviorLib.LateItems = {"Item_Lightning1"} 
 
-
 -- Harass up from ready skills
 object.nHoldUp   = 10;
 object.nFullWhip = 15;
-object.nVoodooUp = 60;
+object.nVoodooUp = 40;
 
 
 -- Skillbuild table, 0=Hold, 1=Puppet Show, 2=Whiplash, 3=Voodoo, 4=Attri
@@ -118,17 +116,6 @@ local function getNearestUnit(botBrain, hero, nRadius)
   
 end
 
-  --Echo unit closest to target hero
---  if closestUnit then
---    BotEcho(closestUnit:GetTypeName())
---  end
-
--- Echo behavior of the target
-local function echoHeroBehavior(unitTarget)
-  if unitTarget:IsHero() and unitTarget:GetBehavior() and unitTarget:GetBehavior():GetType() then
-    BotEcho("Target behavior is " .. unitTarget:GetBehavior():GetType())  
-  end
-end
 
 -- Get the voodoo puppet
 local function getPuppet(botBrain, myPos)
@@ -271,8 +258,14 @@ end
 --------------------------------
 function object:SkillBuild()
   core.VerboseLog("SkillBuild()")
-
-  -- takes care at load/reload, <NAME_#> to be replaced by some convinient name.
+  
+--  local teamBotBrain = core.teamBotBrain
+--  local heroes = teamBotBrain:GetHeroes()
+--  
+--  for _, hero in pairs(heroes) do
+--    BotEcho(hero:GetTypeName())    
+--  end
+  
   local unitSelf = self.core.unitSelf
   if  skills.hold == nil then
     skills.hold = unitSelf:GetAbility(0)
@@ -444,40 +437,3 @@ behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
 BotEcho('finished loading puppetmaster_main')
 
---  local nRadius = 600
---  local tEnemies = core.AssessLocalUnits(botBrain, myPos, nRadius).Enemies
-
---  for _, enemy in pairs(tEnemies) do --If a puppet exists, set it as the target
---    if enemy:GetTypeName() == "Pet_PuppetMaster_Ability4" then
---      unitTarget = enemy
---      BotEcho("TARGETING PUPPET")
---    end
---  end
---  
---  if core.CanSeeUnit(botBrain, unitTarget) then
---    local abilShow = skills.show
---    
---    if abilShow:CanActivate() then
---      bActionTaken = core.OrderAbilityEntity(botBrain, abilShow, unitTarget)
---    end
---
---  end
-
-
---  if not nearestEnemy then -- If the target is alone, cast voodoo
---    if not bActionTaken and bCanSee then
---      local abilVoodoo = skills.voodoo
---      if abilVoodoo:CanActivate() then
---        BotEcho("TARGET ALONE. VOODOO")
---        bActionTaken = core.OrderAbilityEntity(botBrain, abilVoodoo, unitTarget)
---      end
---    end
---  else if nearestEnemy == "Pet_PuppetMaster_Ability4" then --If the nearest thing near the target is the puppet, cast puppet show
---    if not bActionTaken and bCanSee then
---      local abilShow = skills.show
---      if abilShow:CanActivate() then
---        BotEcho("TARGET NEAR PUPPET. PUPPET SHOW")
---        bActionTaken = core.OrderAbilityEntity(botBrain, abilShow, unitTarget)
---      end
---    end
---  end

@@ -67,20 +67,20 @@ object.tSkills = {
   4, 4, 4, 4, 4,
 }
 
-behaviorLib.StartingItems = {"Item_ManaBattery", "Item_LoggersHatchet", "Item_IronBuckler", "Item_RunesOfTheBlight"}
+behaviorLib.StartingItems = {"Item_ManaBattery", "Item_IronBuckler", "Item_Shield2"}
 behaviorLib.LaneItems     = {"Item_EnhancedMarchers", "Item_PowerSupply"}
-behaviorLib.MidItems      = {"Item_SolsBulwark", "Item_Stealth"}
-behaviorLib.LateItems     = {"Item_Pierce", "Item_Immunity", "Item_Sasuke", "Item_DaemonicBreastplate", "Item_Silence"}
+behaviorLib.MidItems      = {"Item_SolsBulwark"}
+behaviorLib.LateItems     = {"Item_DaemonicBreastplate", "Item_Pierce", "Item_Immunity"}
 
 --------------------------------
 -- Utility constants
 --------------------------------
-object.nComboReady  = 60  -- How much utility from a ready combo
-object.nMidCombo    = 70  -- How much utility from being mid combo
+object.nComboReady  = 40  -- How much utility from a ready combo
+object.nMidCombo    = 50  -- How much utility from being mid combo
 
-object.nDashReady   = 15
-object.nVaultReady  = 15
-object.nSlamReady   = 15
+object.nDashReady   = 10
+object.nVaultReady  = 10
+object.nSlamReady   = 10
 
 --------------------------------
 -- Skills
@@ -196,7 +196,7 @@ local comboTarget = nil
 local comboCounter = 0
 local autoAttacks = 0   -- We can add a few autoattack mid-combo
 local comboStartTime = nil
-local comboEndRange = 400 * 400
+local comboRange = 400 * 400
 local comboDuration = 7000 --Combo counter will reset after this time (milliseconds)
 
 local function IsComboReady()
@@ -210,6 +210,9 @@ local function IsComboReady()
   return bIsReady
 end
 
+
+-- Choose combo target. Don't choose targets over #comboRange away. 
+-- Target lowest enemy below 50% health. Else combo Puppet Master.
 local function DetermineComboTarget()
 
   local tLocalEnemies = core.CopyTable(core.localUnits["EnemyHeroes"])
@@ -244,7 +247,7 @@ local function ComboUtility(botBrain)
   
   if comboTarget then 
     local nDistSqrd = getDistance2DSq(core.unitSelf,comboTarget)
-    if nDistSqrd > comboEndRange then
+    if nDistSqrd > comboRange then
        comboStartTime = nil
        comboCounter = 0
       return 0
