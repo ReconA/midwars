@@ -53,7 +53,7 @@ function generics.CustomHarassUtility(target)
   return nUtil
 end
 
-local function generics.IsFreeLine(pos1, pos2)
+function generics.IsFreeLine(pos1, pos2)
   local tAllies = core.CopyTable(core.localUnits["AllyUnits"])
   local tEnemies = core.CopyTable(core.localUnits["EnemyCreeps"])
   local distanceLine = Vector3.Distance2DSq(pos1, pos2)
@@ -80,10 +80,6 @@ local function generics.IsFreeLine(pos1, pos2)
     end
   end
   return true
-end
-
-function generics.Foobar()
-  return "foobar"
 end
 
 BotEcho("Finished loading xxx_CED_xxx generics ..")
