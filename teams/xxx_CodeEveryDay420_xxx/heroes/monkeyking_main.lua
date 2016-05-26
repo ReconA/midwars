@@ -14,7 +14,7 @@ object.bAttackCommands = true
 object.bAbilityCommands = true
 object.bOtherCommands = true
 
-object.bReportBehavior = true
+object.bReportBehavior = false
 object.bDebugUtility = false
 object.bDebugExecute = false
 
@@ -33,8 +33,10 @@ runfile "bots/botbraincore.lua"
 runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
+runfile "bots/teams/xxx_CodeEveryDay420_xxx/heroes/generics.lua"
 
-local core, eventsLib, behaviorLib, metadata, skills = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills
+
+local core, eventsLib, behaviorLib, metadata, skills, generics = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills, object.generics
 
 local print, ipairs, pairs, string, table, next, type, tinsert, tremove, tsort, format, tostring, tonumber, strfind, strsub
   = _G.print, _G.ipairs, _G.pairs, _G.string, _G.table, _G.next, _G.type, _G.table.insert, _G.table.remove, _G.table.sort, _G.string.format, _G.tostring, _G.tonumber, _G.string.find, _G.string.sub
@@ -67,20 +69,23 @@ object.tSkills = {
   4, 4, 4, 4, 4,
 }
 
-behaviorLib.StartingItems = {"Item_ManaBattery", "Item_LoggersHatchet", "Item_IronBuckler", "Item_RunesOfTheBlight"}
+-- Team group utility. Default is 0.35
+behaviorLib.nTeamGroupUtilityMul = 0.51
+
+behaviorLib.StartingItems = {"Item_ManaBattery", "Item_IronBuckler", "Item_Shield2"}
 behaviorLib.LaneItems     = {"Item_EnhancedMarchers", "Item_PowerSupply"}
-behaviorLib.MidItems      = {"Item_SolsBulwark", "Item_Stealth"}
-behaviorLib.LateItems     = {"Item_Pierce", "Item_Immunity", "Item_Sasuke", "Item_DaemonicBreastplate", "Item_Silence"}
+behaviorLib.MidItems      = {"Item_SolsBulwark"}
+behaviorLib.LateItems     = {"Item_DaemonicBreastplate", "Item_Pierce", "Item_Immunity"}
 
 --------------------------------
 -- Utility constants
 --------------------------------
-object.nComboReady  = 60  -- How much utility from a ready combo
-object.nMidCombo    = 70  -- How much utility from being mid combo
+object.nComboReady  = 40  -- How much utility from a ready combo
+object.nMidCombo    = 50  -- How much utility from being mid combo
 
-object.nDashReady   = 15
-object.nVaultReady  = 15
-object.nSlamReady   = 15
+object.nDashReady   = 10
+object.nVaultReady  = 10
+object.nSlamReady   = 10
 
 --------------------------------
 -- Skills
@@ -163,24 +168,12 @@ object.oncombatevent = object.oncombateventOverride
 local function CustomHarassUtilityFnOverride(hero)
   local nUtil = 0
 
-  local dash, vault, slam = skills.dash, skills.vault, skills.slam
-  if dash and vault and slam and dash:CanActivate() and vault:CanActivate() and slam:CanActivate() then
-    return object.nComboReady - 10
-  end
-  
-  if skills.dash and skills.dash:CanActivate() then
-    nUtil = nUtil + object.nDashReady
-  end
+--  local dash, vault, slam = skills.dash, skills.vault, skills.slam
+--  if dash and vault and slam and dash:CanActivate() and vault:CanActivate() and slam:CanActivate() then
+--    return object.nComboReady - 20
+--  end
 
-  if skills.vault and skills.vault:CanActivate() then
-    nUtil = nUtil + object.nVaultReady
-  end
-
-  if skills.slam and skills.slam:CanActivate() then
-    nUtil = nUtil + object.nSlamReady
-  end
-
-  return nUtil
+  return nUtil + generics.CustomHarassUtility(hero)
 end
 -- assign custom Harrass function to the behaviourLib object
 behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
@@ -196,7 +189,7 @@ local comboTarget = nil
 local comboCounter = 0
 local autoAttacks = 0   -- We can add a few autoattack mid-combo
 local comboStartTime = nil
-local comboEndRange = 400 * 400
+local comboRange = 400 * 400
 local comboDuration = 7000 --Combo counter will reset after this time (milliseconds)
 
 local function IsComboReady()
@@ -210,7 +203,17 @@ local function IsComboReady()
   return bIsReady
 end
 
+
+-- Choose combo target. Don't choose targets over #comboRange away.
+-- Prioritize team target.  
 local function DetermineComboTarget()
+
+  local teamBotBrain = core.teamBotBrain
+  local teamTarget = teamBotBrain:GetTeamTarget()
+  
+  if teamTarget and core.CanSeeUnit(botBrain, teamTarget) then
+    return teamTarget
+  end
 
   local tLocalEnemies = core.CopyTable(core.localUnits["EnemyHeroes"])
   local maxDistance = 300
@@ -244,7 +247,7 @@ local function ComboUtility(botBrain)
   
   if comboTarget then 
     local nDistSqrd = getDistance2DSq(core.unitSelf,comboTarget)
-    if nDistSqrd > comboEndRange then
+    if nDistSqrd > comboRange then
        comboStartTime = nil
        comboCounter = 0
       return 0
@@ -268,7 +271,6 @@ end
 
 local function ComboDash(botBrain)
 
-  BotEcho("DASH?")
   local dash = skills.dash
   local bContinue = false
   
@@ -280,9 +282,6 @@ local function ComboDash(botBrain)
     local nFacing = core.HeadingDifference(unitSelf, targetPos)
     local nRange = dash:GetRange()
 
-    BotEcho("Facing:" .. nFacing)
-    BotEcho("Distance: " .. nDistanceSqrd)
-    BotEcho("Dash range: " .. (nRange * nRange))
     if nDistanceSqrd < (nRange * nRange) and nFacing < 0.4 then
       BotEcho("DASH!")
       bContinue = core.OrderAbility(botBrain, dash)
@@ -337,7 +336,6 @@ end
 
 -- Autoattack mid-combo
 local function ComboAutoAttack(botBrain)
-  BotEcho("MID COMBO AUTOATTACK")
   local bAttack = false
   local unitSelf = core.unitSelf
   if comboTarget and core.IsUnitInRange(unitSelf, comboTarget) then
@@ -349,7 +347,6 @@ end
 
 -- Move towards combo target
 local function ComboMove(botBrain)
-  BotEcho("MID COMBO MOVE")
   local unitSelf = core.unitSelf  
   if comboTarget then
     core.OrderMoveToUnit(botBrain, unitSelf, comboTarget)  
@@ -358,7 +355,6 @@ end
 
 -- Combo should be Dash - Slam - Vault - Dash - Vault  (Q E W Q W)
 local function ComboExecute(botBrain)  
-  BotEcho("COMBO EXECUTE")
   comboTarget = DetermineComboTarget()
   
   local bContinue = false
@@ -366,12 +362,6 @@ local function ComboExecute(botBrain)
   if comboCounter == 0 or comboCounter == 3 then
     bContinue = ComboDash(botBrain)
   elseif comboCounter == 1 then
---    if autoAttacks < 1 then
---      ComboAutoAttack(botBrain)
---      autoAttacks = autoAttacks + 1
---    else
---      bContinue = ComboSlam(botBrain)
---    end
       bContinue = ComboSlam(botBrain)
   elseif comboCounter == 2 or comboCounter == 4 then
     autoAttacks = 0

@@ -33,7 +33,7 @@ runfile "bots/botbraincore.lua"
 runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
-runfile "bots/teams/default/generics.lua"
+runfile "bots/teams/xxx_CodeEveryDay420_xxx/heroes/generics.lua"
 
 
 local core, eventsLib, behaviorLib, metadata, skills, generics = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills, object.generics
@@ -55,6 +55,9 @@ behaviorLib.StartingItems = {"Item_HealthPotion", "Item_ManaBattery", "Item_Pret
 behaviorLib.LaneItems = {"Item_Marchers", "Item_PowerSupply", "Item_Intelligence5", "Item_Replenish", "Item_Steamboots"}
 behaviorLib.MidItems = {"Item_Pierce", "Item_Lightning1", "Item_Pierce 3"}
 behaviorLib.LateItems = {"Item_Wingbow", "Item_Evasion", "Item_Weapon3", "Item_BehemothsHeart"}
+
+-- Team group utility. Default is 0.35
+behaviorLib.nTeamGroupUtilityMul = 0.51
 
 
 --------------------------------
@@ -165,9 +168,10 @@ end
 
 local function CustomHarassUtilityFnOverride(target)
   local nUtility = 0
-  if target:IsStunned() then
-    nUtility = nUtility + 50
-  end
+--  Stun is checked in Generics CustomHarassUtilityFnOverride()
+--  if target:IsStunned() then
+--    nUtility = nUtility + 50
+--  end
   local call = skills.call
   if call and call:CanActivate() then
     nUtility = nUtility + 10

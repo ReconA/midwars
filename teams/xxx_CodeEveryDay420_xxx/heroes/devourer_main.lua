@@ -1,3 +1,6 @@
+-- This Devourer is mostly "loaned" from Tkt-hon. ¯\_(ツ)_/¯
+
+
 local _G = getfenv(0)
 local object = _G.object
 
@@ -14,7 +17,7 @@ object.bAttackCommands = true
 object.bAbilityCommands = true
 object.bOtherCommands = true
 
-object.bReportBehavior = false
+object.bReportBehavior = true
 object.bDebugUtility = false
 object.bDebugExecute = false
 
@@ -33,7 +36,8 @@ runfile "bots/botbraincore.lua"
 runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
-runfile "bots/teams/default/generics.lua"
+runfile "bots/teams/xxx_CodeEveryDay420_xxx/heroes/generics.lua"
+
 
 local core, eventsLib, behaviorLib, metadata, skills, generics = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills, object.generics
 
@@ -41,7 +45,7 @@ local print, ipairs, pairs, string, table, next, type, tinsert, tremove, tsort, 
   = _G.print, _G.ipairs, _G.pairs, _G.string, _G.table, _G.next, _G.type, _G.table.insert, _G.table.remove, _G.table.sort, _G.string.format, _G.tostring, _G.tonumber, _G.string.find, _G.string.sub
 local ceil, floor, pi, tan, atan, atan2, abs, cos, sin, acos, max, random
   = _G.math.ceil, _G.math.floor, _G.math.pi, _G.math.tan, _G.math.atan, _G.math.atan2, _G.math.abs, _G.math.cos, _G.math.sin, _G.math.acos, _G.math.max, _G.math.random
-
+  
 local BotEcho, VerboseLog, BotLog = core.BotEcho, core.VerboseLog, core.BotLog
 local Clamp = core.Clamp
 
@@ -49,10 +53,19 @@ BotEcho('loading devourer_main...')
 
 object.heroName = 'Hero_Devourer'
 
+-- Team group utility. Default is 0.35
+behaviorLib.nTeamGroupUtilityMul = 0.51
+
 --------------------------------
 -- Lanes
 --------------------------------
 core.tLanePreferences = {Jungle = 0, Mid = 5, ShortSolo = 0, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 0, LongCarry = 0}
+
+object.nUltiUp = 35
+object.nHookUp = 5
+
+object.nHookUtility = 60
+object.nRotUtility = 50
 
 --------------------------------
 -- Skills
@@ -97,6 +110,38 @@ behaviorLib.LaneItems = {"Item_Marchers", "Item_EnhancedMarchers", "Item_PowerSu
 behaviorLib.MidItems = {"Item_PortalKey", "Item_MagicArmor2"}
 behaviorLib.LateItems = {"Item_BehemothsHeart"}
 
+
+local function IsFreeLine(pos1, pos2, ignoreAllies)
+  local tAllies = core.CopyTable(core.localUnits["AllyUnits"])
+  local tEnemies = core.CopyTable(core.localUnits["EnemyCreeps"])
+  local distanceLine = Vector3.Distance2DSq(pos1, pos2)
+  local x1, x2, y1, y2 = pos1.x, pos2.x, pos1.y, pos2.y
+  local spaceBetween = 50 * 50
+  if not ignoreAllies then
+    for _, ally in pairs(tAllies) do
+      local posAlly = ally:GetPosition()
+      local x3, y3 = posAlly.x, posAlly.y
+      local calc = x1*y2 - x2*y1 + x2*y3 - x3*y2 + x3*y1 - x1*y3
+      local calc2 = calc * calc
+      local actual = calc2 / distanceLine
+      if actual < spaceBetween then
+        return false
+      end
+    end
+  end
+  for _, creep in pairs(tEnemies) do
+    local posCreep = creep:GetPosition()
+    local x3, y3 = posCreep.x, posCreep.y
+    local calc = x1*y2 - x2*y1 + x2*y3 - x3*y2 + x3*y1 - x1*y3
+    local calc2 = calc * calc
+    local actual = calc2 / distanceLine
+    if actual < spaceBetween then
+      return false
+    end
+  end
+  return true
+end
+
 ------------------------------------------------------
 --            onthink override                      --
 -- Called every bot tick, custom onthink code here  --
@@ -117,11 +162,29 @@ object.onthink = object.onthinkOverride
 ----------------------------------------------
 -- @param: eventdata
 -- @return: none
+
+local unitHooked = nil
 function object:oncombateventOverride(EventData)
   self:oncombateventOld(EventData)
 
-  -- custom code here
+  if EventData.InflictorName == "Projectile_Devourer_Ability1" and EventData.SourceUnit:GetUniqueID() == core.unitSelf:GetUniqueID() then
+    if EventData.Type == "Attack" then
+      local victim = EventData.TargetUnit
+      if victim:IsHero() then
+        unitHooked = victim
+      end
+    elseif EventData.Type == "Projectile_Target" and EventData.TargetUnit:GetUniqueID() == core.unitSelf:GetUniqueID() then
+      if unitHooked then
+        local teamBotBrain = core.teamBotBrain
+        if teamBotBrain.SetTeamTarget then
+          teamBotBrain:SetTeamTarget(unitHooked)
+        end
+      end
+      unitHooked = nil
+    end
+  end
 end
+
 -- override combat event trigger function.
 object.oncombateventOld = object.oncombatevent
 object.oncombatevent = object.oncombateventOverride
@@ -131,14 +194,14 @@ local function CustomHarassUtilityOverride(target)
   local nUtility = 0
 
   if skills.hook:CanActivate() then
-    nUtility = nUtility + 10
+    nUtility = nUtility + object.nHookUp
   end
 
   if skills.ulti:CanActivate() then
-    nUtility = nUtility + 40
+    nUtility = nUtility + object.nUltiUp
   end
 
-  return generics.CustomHarassUtility(target) + nUtility
+  return nUtility + generics.CustomHarassUtility(target)
 end
 behaviorLib.CustomHarassUtility = CustomHarassUtilityOverride
 
@@ -226,13 +289,22 @@ local function DetermineHookTarget(hook)
   local maxDistance = hook:GetRange()
   local maxDistanceSq = maxDistance * maxDistance
   local myPos = core.unitSelf:GetPosition()
+  local teamBotBrain = core.teamBotBrain
+  if teamBotBrain.GetTeamTarget then
+    local teamTarget = teamBotBrain:GetTeamTarget()
+    if teamTarget then
+      if IsFreeLine(myPos, teamTarget:GetPosition()) then
+        return teamTarget
+      end
+    end
+  end
   local unitTarget = nil
   local distanceTarget = 999999999
   for _, unitEnemy in pairs(tLocalEnemies) do
     local enemyPos = unitEnemy:GetPosition()
     local distanceEnemy = Vector3.Distance2DSq(myPos, enemyPos)
     if distanceEnemy < maxDistanceSq then
-      if distanceEnemy < distanceTarget and generics.IsFreeLine(myPos, enemyPos) then
+      if distanceEnemy < distanceTarget and IsFreeLine(myPos, enemyPos) then
         unitTarget = unitEnemy
         distanceTarget = distanceEnemy
       end
@@ -241,6 +313,7 @@ local function DetermineHookTarget(hook)
   return unitTarget
 end
 
+
 local hookTarget = nil
 local function HookUtility(botBrain)
   local hook = skills.hook
@@ -248,7 +321,7 @@ local function HookUtility(botBrain)
     local unitTarget = DetermineHookTarget(hook)
     if unitTarget then
       hookTarget = unitTarget:GetPosition()
-      return 60
+      return object.nHookUtility
     end
   end
   hookTarget = nil
@@ -285,7 +358,7 @@ local function RotEnableUtility(botBrain)
   local hasEffect = core.unitSelf:HasState("State_Devourer_Ability2_Self")
   local hasEnemiesClose = HasEnemiesInRange(core.unitSelf, rotRange)
   if rot:CanActivate() and hasEnemiesClose and not hasEffect then
-    return 50
+    return object.nRotUtility
   end
   return 0
 end
@@ -293,7 +366,12 @@ local function RotEnableExecute(botBrain)
   local rot = skills.rot
   if rot and rot:CanActivate() then
     return core.OrderAbility(botBrain, rot)
-  end
+  end--  local teamBotBrain = core.teamBotBrain
+--  local heroes = teamBotBrain:GetHeroes()
+--  
+--  for _, hero in pairs(heroes) do
+--    BotEcho(hero:GetTypeName())    
+--  end
   return false
 end
 RotEnableBehavior["Utility"] = RotEnableUtility
@@ -304,7 +382,12 @@ tinsert(behaviorLib.tBehaviors, RotEnableBehavior)
 local RotDisableBehavior = {}
 local function RotDisableUtility(botBrain)
   local rot = skills.rot
-  local rotRange = rot:GetTargetRadius()
+  local rotRange = rot:GetTargetRadius()--  local teamBotBrain = core.teamBotBrain
+--  local heroes = teamBotBrain:GetHeroes()
+--  
+--  for _, hero in pairs(heroes) do
+--    BotEcho(hero:GetTypeName())    
+--  end
   local hasEffect = core.unitSelf:HasState("State_Devourer_Ability2_Self")
   local hasEnemiesClose = HasEnemiesInRange(core.unitSelf, rotRange)
   if rot:CanActivate() and hasEffect and not hasEnemiesClose then
@@ -323,5 +406,50 @@ RotDisableBehavior["Utility"] = RotDisableUtility
 RotDisableBehavior["Execute"] = RotDisableExecute
 RotDisableBehavior["Name"] = "Rot disable"
 tinsert(behaviorLib.tBehaviors, RotDisableBehavior)
+
+--------------------------------
+--Melee Push execute fix
+--------------------------------
+
+local function PushExecuteFix(botBrain)
+
+
+  if core.unitSelf:IsChanneling() then 
+    return
+  end
+  
+  local unitSelf = core.unitSelf
+  local bActionTaken = false
+
+  --Attack creeps if we're in range
+  if bActionTaken == false then
+    local unitTarget = core.unitEnemyCreepTarget
+    if unitTarget then
+      local nRange = core.GetAbsoluteAttackRangeToUnit(unitSelf, unitTarget)
+      if unitSelf:GetAttackType() == "melee" then
+        --override melee so they don't stand *just* out of range
+        nRange = 250
+      end
+
+      if unitSelf:IsAttackReady() and core.IsUnitInRange(unitSelf, unitTarget, nRange) then
+        bActionTaken = core.OrderAttackClamp(botBrain, unitSelf, unitTarget)
+      end
+
+    end
+  end
+
+  if bActionTaken == false then
+    local vecDesiredPos = behaviorLib.PositionSelfLogic(botBrain)
+    if vecDesiredPos then
+      bActionTaken = behaviorLib.MoveExecute(botBrain, vecDesiredPos)
+    end
+  end
+
+  if bActionTaken == false then
+    return false
+  end
+end
+behaviorLib.PushBehavior["Execute"] = PushExecuteFix
+
 
 BotEcho('finished loading devourer_main')
