@@ -144,12 +144,12 @@ end
 core.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
-local function CustomHarassUtilityFnOverride(target)
-  local nUtility = 0
-
-  return generics.CustomHarassUtility(target) + nUtility
+local function CustomHarassUtilityFnOverride(hero)
+  return generics.CustomHarassUtility(hero)
 end
+-- assign custom Harrass function to the behaviourLib object
 behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
+
 --------------------------------------------------------------
 --                    Creep attack Behavior                 --
 --------------------------------------------------------------
