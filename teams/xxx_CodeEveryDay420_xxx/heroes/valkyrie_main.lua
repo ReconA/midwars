@@ -245,6 +245,7 @@ local function ArrowUtility(botBrain)
   arrowTarget = nil
   return 0
 end
+
 local function ArrowExecute(botBrain)
   local javelin = skills.javelin
   if javelin and javelin:CanActivate() and arrowTarget then
