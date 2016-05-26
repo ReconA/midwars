@@ -17,7 +17,7 @@ object.bAttackCommands = true
 object.bAbilityCommands = true
 object.bOtherCommands = true
 
-object.bReportBehavior = true
+object.bReportBehavior = false
 object.bDebugUtility = false
 object.bDebugExecute = false
 
@@ -45,7 +45,7 @@ local print, ipairs, pairs, string, table, next, type, tinsert, tremove, tsort, 
   = _G.print, _G.ipairs, _G.pairs, _G.string, _G.table, _G.next, _G.type, _G.table.insert, _G.table.remove, _G.table.sort, _G.string.format, _G.tostring, _G.tonumber, _G.string.find, _G.string.sub
 local ceil, floor, pi, tan, atan, atan2, abs, cos, sin, acos, max, random
   = _G.math.ceil, _G.math.floor, _G.math.pi, _G.math.tan, _G.math.atan, _G.math.atan2, _G.math.abs, _G.math.cos, _G.math.sin, _G.math.acos, _G.math.max, _G.math.random
-  
+
 local BotEcho, VerboseLog, BotLog = core.BotEcho, core.VerboseLog, core.BotLog
 local Clamp = core.Clamp
 
@@ -337,9 +337,9 @@ local function RotEnableExecute(botBrain)
     return core.OrderAbility(botBrain, rot)
   end--  local teamBotBrain = core.teamBotBrain
 --  local heroes = teamBotBrain:GetHeroes()
---  
+--
 --  for _, hero in pairs(heroes) do
---    BotEcho(hero:GetTypeName())    
+--    BotEcho(hero:GetTypeName())
 --  end
   return false
 end
@@ -353,9 +353,9 @@ local function RotDisableUtility(botBrain)
   local rot = skills.rot
   local rotRange = rot:GetTargetRadius()--  local teamBotBrain = core.teamBotBrain
 --  local heroes = teamBotBrain:GetHeroes()
---  
+--
 --  for _, hero in pairs(heroes) do
---    BotEcho(hero:GetTypeName())    
+--    BotEcho(hero:GetTypeName())
 --  end
   local hasEffect = core.unitSelf:HasState("State_Devourer_Ability2_Self")
   local hasEnemiesClose = HasEnemiesInRange(core.unitSelf, rotRange)
@@ -383,10 +383,10 @@ tinsert(behaviorLib.tBehaviors, RotDisableBehavior)
 local function PushExecuteFix(botBrain)
 
 
-  if core.unitSelf:IsChanneling() then 
+  if core.unitSelf:IsChanneling() then
     return
   end
-  
+
   local unitSelf = core.unitSelf
   local bActionTaken = false
 

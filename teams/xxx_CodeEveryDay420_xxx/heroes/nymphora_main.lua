@@ -14,8 +14,8 @@ object.bAttackCommands = true
 object.bAbilityCommands = true
 object.bOtherCommands = true
 
-object.bReportBehavior = true
-object.bDebugUtility = true
+object.bReportBehavior = false
+object.bDebugUtility = false
 object.bDebugExecute = false
 
 object.logger = {}
@@ -33,7 +33,7 @@ runfile "bots/botbraincore.lua"
 runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
-runfile "bots/teams/xxx_CodeEveryDay420_xxx/heroes/generics.lua"
+runfile "bots/teams/default/generics.lua"
 
 local core, eventsLib, behaviorLib, metadata, skills, generics = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills, object.generics
 
@@ -55,17 +55,6 @@ behaviorLib.LaneItems = {"Item_ManaBattery", "Item_Marchers", "Item_PowerSupply"
 behaviorLib.MidItems = {"Item_PlatedGreaves", "Item_Astrolabe", "Item_NomesWisdom", "Item_JadeSpire"}
 behaviorLib.LateItems = {"Item_BehemothsHeart"}
 
--------------------------------
--- Utility constants
--------------------------------
---
--- Team group utility. Default is 0.35
-behaviorLib.nTeamGroupUtilityMul = 0.51
-
-object.nTargetStunned = 20
-
-object.nHealUtility = 50
-object.nManaUtility = 50
 
 --------------------------------
 -- Lanes
@@ -144,12 +133,16 @@ end
 core.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
-local function CustomHarassUtilityFnOverride(hero)
-  return generics.CustomHarassUtility(hero)
-end
--- assign custom Harrass function to the behaviourLib object
-behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
+local function CustomHarassUtilityFnOverride(target)
+  local nUtility = 20
 
+  if target:IsStunned() then
+    nUtility = nUtility + 30
+  end
+
+  return generics.CustomHarassUtility(target) + nUtility
+end
+behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 --------------------------------------------------------------
 --                    Creep attack Behavior                 --
 --------------------------------------------------------------
@@ -161,7 +154,7 @@ local function AttackCreepsExecuteOverride(botBrain)
   local unitsNearby = core.AssessLocalUnits(botBrain, unitSelf:GetPosition(), 900)
   local creeps = unitsNearby.EnemyCreeps
   if heal:CanActivate() and core.NumberElements(creeps) > 2 then
---    core.BotEcho("Healbomb")
+    core.BotEcho("Healbomb")
     bActionTaken = core.OrderAbilityPosition(botBrain, heal, HoN.GetGroupCenter(creeps))
   end
 
@@ -217,6 +210,14 @@ local function ShopUtilityOverride(botBrain)
         bCourierFound = true
       end
   end
+
+  -- if bCourierFound then
+  --   core.BotEcho("TRUE")
+  -- end
+  --
+  -- if not bCourierFound then
+  --   core.BotEcho("FALSE")
+  -- end
 
 	local utility = 0
 	if not bCourierFound then
@@ -357,13 +358,12 @@ local function ManaUtility(botBrain)
   local mana = skills.mana
   manaTarget = FindManaTarget(botBrain, mana)
   if mana:CanActivate() and manaTarget then
-     return object.nManaUtility
+     return 50
   end
   return 0
 end
 
-local function ManaExecute(botBrain)  
-
+local function ManaExecute(botBrain)
   local mana = skills.mana
   if mana and mana:CanActivate() then
     return core.OrderAbilityEntity(botBrain, mana, manaTarget)
@@ -396,12 +396,11 @@ local function FindHealTarget(botBrain, heal)
   end
   return target
 end
-
 local function HealUtility(botBrain)
   local heal = skills.heal
   healTarget = FindHealTarget(botBrain, heal)
   if heal:CanActivate() and healTarget and core.unitSelf:GetManaPercent() > 0.2 then
-     return object.nHealUtility
+     return 50
   end
   return 0
 end
@@ -409,7 +408,7 @@ end
 local function HealExecute(botBrain)
   local heal = skills.heal
   if heal and heal:CanActivate() then
---    core.BotEcho("Healing")
+    core.BotEcho("Healing")
     return core.OrderAbilityPosition(botBrain, heal, healTarget:GetPosition())
   end
   return false
@@ -417,7 +416,7 @@ end
 local HealBehavior = {}
 HealBehavior["Utility"] = HealUtility
 HealBehavior["Execute"] = HealExecute
-HealBehavior["Name"] = "Heal"
+HealBehavior["Name"] = "Mana"
 tinsert(behaviorLib.tBehaviors, HealBehavior)
 
 --------------------------------------------------------------
