@@ -172,7 +172,6 @@ local function CustomHarassUtilityFnOverride(hero)
 --  if dash and vault and slam and dash:CanActivate() and vault:CanActivate() and slam:CanActivate() then
 --    return object.nComboReady - 20
 --  end
-
   return nUtil + generics.CustomHarassUtility(hero)
 end
 -- assign custom Harrass function to the behaviourLib object
@@ -206,7 +205,7 @@ end
 
 -- Choose combo target. Don't choose targets over #comboRange away.
 -- Prioritize team target.  
-local function DetermineComboTarget()
+local function DetermineComboTarget(botBrain)
 
   local teamBotBrain = core.teamBotBrain
   local teamTarget = teamBotBrain:GetTeamTarget()
@@ -260,7 +259,7 @@ local function ComboUtility(botBrain)
   
   local dash, vault, slam = skills.dash, skills.vault, skills.slam
   if dash and vault and slam and dash:CanActivate() and vault:CanActivate() and slam:CanActivate() then
-    comboTarget = DetermineComboTarget()
+    comboTarget = DetermineComboTarget(botBrain)
     if comboTarget then
       return object.nComboReady
     end
@@ -355,7 +354,7 @@ end
 
 -- Combo should be Dash - Slam - Vault - Dash - Vault  (Q E W Q W)
 local function ComboExecute(botBrain)  
-  comboTarget = DetermineComboTarget()
+  comboTarget = DetermineComboTarget(botBrain)
   
   local bContinue = false
   
