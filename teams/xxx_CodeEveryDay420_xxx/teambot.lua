@@ -31,12 +31,13 @@ function object:GetTeamTarget()
   return nil
 end
 
+local unitTeamTarget = nil
 
 function object:SetTeamTarget(target)
   local old = self:GetTeamTarget()
   if old then
     local basePos = core.allyMainBaseStructure:GetPosition()
-    if Vector3.Distance2D(basePos, old:GetPosition()) < Vector3.Distance2D(basePos, target:GetPosition()) then
+    if Vector3.Distance2D(basePos, old:GetPosition()) < Vector3.Distance2D(basePos, target:GetPosition()) then -- Don't set a target that is further away than current target
       return
     end
   end
@@ -50,11 +51,20 @@ local STATE_PUSHING   = 2
 object.nPushState = STATE_PUSH
 
 local nGroupDist = 400
-local nMaxTime = 30000
+local groupUpDistSq = nGroupDist * nGroupDist
+local nMaxTime = 20000
 local nStartTime = 0
 
-local groupUpDistSq = nGroupDist * nGroupDist
-
+-- Alternate between push and group state. 
+-- Conditions for switching from group to push:
+--   - All ally heroes are near the grouping point.
+--    OR   
+--   - 20 seconds have passed since grouping started. 
+--
+-- Conditions for switching from push to group:
+--   - Less than 4 living heroes.
+--   AND NOT
+--   - Enemy base almost down and we have the heroes near it.
 function object:GroupAndPushLogic()
   self:BuildLanes()
   self.unitPushTarget = core.enemyMainBaseStructure

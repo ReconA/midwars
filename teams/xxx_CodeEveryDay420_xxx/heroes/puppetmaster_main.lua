@@ -33,8 +33,9 @@ runfile "bots/botbraincore.lua"
 runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
+runfile "bots/teams/xxx_CodeEveryDay420_xxx/heroes/generics.lua"
 
-local core, eventsLib, behaviorLib, metadata, skills = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills
+local core, eventsLib, behaviorLib, metadata, skills, generics = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills, object.generics
 
 local print, ipairs, pairs, string, table, next, type, tinsert, tremove, tsort, format, tostring, tonumber, strfind, strsub
   = _G.print, _G.ipairs, _G.pairs, _G.string, _G.table, _G.next, _G.type, _G.table.insert, _G.table.remove, _G.table.sort, _G.string.format, _G.tostring, _G.tonumber, _G.string.find, _G.string.sub
@@ -58,9 +59,11 @@ behaviorLib.MidItems = {"Item_WhisperingHelm"}
 behaviorLib.LateItems = {"Item_Lightning1"} 
 
 -- Harass up from ready skills
-object.nHoldUp   = 10;
 object.nFullWhip = 15;
-object.nVoodooUp = 40;
+object.nVoodooUp = 30;
+
+-- Team group utility. Default is 0.35
+behaviorLib.nTeamGroupUtilityMul = 0.51
 
 
 -- Skillbuild table, 0=Hold, 1=Puppet Show, 2=Whiplash, 3=Voodoo, 4=Attri
@@ -137,17 +140,16 @@ local function puppetExistsHarass(botBrain, unitTarget, puppet)
   
   
   -- If the puppet target is far from puppet, cast hold 
-  local nDistToPuppet = getDistance2DSq(puppet, object.puppetTarget)
+  local nDistToPuppetSq = getDistance2DSq(puppet, object.puppetTarget)
   local nThreshold = 1000
 
-  if nDistToPuppet > (nThreshold * nThreshold) then 
+  if nDistToPuppetSq > (nThreshold * nThreshold) then 
     local abilHold = skills.hold
     if not bActionTaken and abilHold and abilHold:CanActivate() then
       unitTarget = object.puppetTarget
       local nTargetDistanceSq = getDistance2DSq(unitSelf, unitTarget) 
       local nMyRange = unitSelf:GetAttackRange()
       if nTargetDistanceSq > (nMyRange * nMyRange) then
-        BotEcho("HOLD ON PUPPET")
         bActionTaken = core.OrderAbilityEntity(botBrain, abilHold, puppet)
       end
       
@@ -156,12 +158,11 @@ local function puppetExistsHarass(botBrain, unitTarget, puppet)
 
  -- If the puppet target is near the puppet, cast Puppet Show
   local abilShow = skills.show
-  if abilShow and abilShow: CanActivate() then
+  if not bActionTaken and abilShow and abilShow: CanActivate() then
     local nRadius = 200 + abilShow:GetLevel() * 50
     local nearestToFoe = getNearestUnit(botBrain, unitTarget, nRadius)
     
     if nearestToFoe and nearestToFoe:GetTypeName() == object.sPuppetName then
-      BotEcho("PUPPET SHOW ON PUPPET")
       local bActionTaken = core.OrderAbilityEntity(botBrain, abilShow, puppet)
     end
   end
@@ -203,7 +204,6 @@ local function noPuppetExistsHarass(botBrain, unitTarget)
     local nRange = abilShow: GetRange()
     local closestToTarget = getNearestUnit(botBrain, unitTarget, 400) --400 == radius of puppet show
     if nCD < nVoodooCD and nTargetDistanceSq < (nRange * nRange) and closestToTarget then
-      BotEcho("DANCE FOR ME")
       bActionTaken = core.OrderAbilityEntity(botBrain, abilShow, unitTarget)
     end
   end
@@ -259,13 +259,6 @@ end
 function object:SkillBuild()
   core.VerboseLog("SkillBuild()")
   
---  local teamBotBrain = core.teamBotBrain
---  local heroes = teamBotBrain:GetHeroes()
---  
---  for _, hero in pairs(heroes) do
---    BotEcho(hero:GetTypeName())    
---  end
-  
   local unitSelf = self.core.unitSelf
   if  skills.hold == nil then
     skills.hold = unitSelf:GetAbility(0)
@@ -310,6 +303,8 @@ function object:oncombateventOverride(EventData)
   if EventData.Type == "Ability" then
     if EventData.InflictorName == "Ability_PuppetMaster4" then
        object.puppetTarget = EventData.TargetUnit
+       local teamBotBrain = core.teamBotBrain
+       teamBotBrain:SetTeamTarget(object.puppetTarget)
     end
   end
 end
@@ -317,11 +312,6 @@ end
 -- override combat event trigger function.
 object.oncombateventOld = object.oncombatevent
 object.oncombatevent = object.oncombateventOverride
-
--- people can/well override this function to heal at well better (bottle sip etc) called the whole time
-function behaviorLib.CustomHealAtWellExecute(botBrain)
-  return false
-end
 
 -- Hold an nearby enemy hero while retreating
 function behaviorLib.CustomRetreatExecute(botBrain)
@@ -363,26 +353,10 @@ end
 -- @param: IunitEntity hero
 -- @return: number
 local function CustomHarassUtilityFnOverride(hero)
-
-  if skills.voodoo:CanActivate() or object.puppetTarget then
-    return object.nVoodooUp
-  end
-
-  local nUtil = 0
-  
-  if skills.whip:GetCharges() == 1 then
-    nUtil = nUtil + object.nFullWhip
-  end
-
-  if skills.hold:CanActivate() then
-    nUtil = nUtil + object.nHoldUp
-  end
-
-  return nUtil
+  return generics.CustomHarassUtility(hero)
 end
 -- assign custom Harrass function to the behaviourLib object
 behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
-
 
 
 --------------------------------------------------------------
@@ -392,27 +366,30 @@ behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 -- @return: none
 
 local function HarassHeroExecuteOverride(botBrain)
+  local teamBotBrain = core.teamBotBrain
+  local teamTarget = teamBotBrain:GetTeamTarget()
+  local unitTarget = nil
+  if teamTarget and core.CanSeeUnit(botBrain, teamTarget) then
+    unitTarget = teamTarget
+  else
+    unitTarget = behaviorLib.heroTarget
+  end
 
-  local unitTarget = behaviorLib.heroTarget
   if unitTarget == nil then
     return object.harassExecuteOld(botBrain)  --Target is invalid, move on to the next behavior
   end
   
   object.lastTarget = unitTarget
   
---  echoHeroBehavior(unitTarget)
-
   local unitSelf = core.unitSelf
 
-  local bCanSee = core.CanSeeUnit(botBrain, unitTarget)
   local bActionTaken = false
 
   local myPos = unitSelf: GetPosition()
 
-  -- Cast voodoo is possible
+  -- Cast voodoo is possible. Don't cast on low HP targets. 
   local abilVoodoo = skills.voodoo
-  if abilVoodoo:CanActivate() then
-    BotEcho("VOODOO")
+  if abilVoodoo:CanActivate() and unitTarget:GetHealthPercent() < 0.2 then
     bActionTaken = core.OrderAbilityEntity(botBrain, abilVoodoo, unitTarget)
   end
   
