@@ -14,8 +14,8 @@ object.bAttackCommands = true
 object.bAbilityCommands = true
 object.bOtherCommands = true
 
-object.bReportBehavior = true
-object.bDebugUtility = true
+object.bReportBehavior = false
+object.bDebugUtility = false
 object.bDebugExecute = false
 
 object.logger = {}
@@ -33,7 +33,7 @@ runfile "bots/botbraincore.lua"
 runfile "bots/eventsLib.lua"
 runfile "bots/metadata.lua"
 runfile "bots/behaviorLib.lua"
-runfile "bots/teams/xxx_CodeEveryDay420_xxx/heroes/generics.lua"
+runfile "bots/teams/default/generics.lua"
 
 local core, eventsLib, behaviorLib, metadata, skills, generics = object.core, object.eventsLib, object.behaviorLib, object.metadata, object.skills, object.generics
 
@@ -55,17 +55,6 @@ behaviorLib.LaneItems = {"Item_ManaBattery", "Item_Marchers", "Item_PowerSupply"
 behaviorLib.MidItems = {"Item_PlatedGreaves", "Item_Astrolabe", "Item_NomesWisdom", "Item_JadeSpire"}
 behaviorLib.LateItems = {"Item_BehemothsHeart"}
 
--------------------------------
--- Utility constants
--------------------------------
---
--- Team group utility. Default is 0.35
-behaviorLib.nTeamGroupUtilityMul = 0.51
-
-object.nTargetStunned = 20
-
-object.nHealUtility = 50
-object.nManaUtility = 50
 
 --------------------------------
 -- Lanes
@@ -144,12 +133,16 @@ end
 core.harassExecuteOld = behaviorLib.HarassHeroBehavior["Execute"]
 behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 
-local function CustomHarassUtilityFnOverride(hero)
-  return generics.CustomHarassUtility(hero)
-end
--- assign custom Harrass function to the behaviourLib object
-behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
+local function CustomHarassUtilityFnOverride(target)
+  local nUtility = 20
 
+  if target:IsStunned() then
+    nUtility = nUtility + 30
+  end
+
+  return generics.CustomHarassUtility(target) + nUtility
+end
+behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 --------------------------------------------------------------
 --                    Creep attack Behavior                 --
 --------------------------------------------------------------
@@ -161,7 +154,7 @@ local function AttackCreepsExecuteOverride(botBrain)
   local unitsNearby = core.AssessLocalUnits(botBrain, unitSelf:GetPosition(), 900)
   local creeps = unitsNearby.EnemyCreeps
   if heal:CanActivate() and core.NumberElements(creeps) > 2 then
---    core.BotEcho("Healbomb")
+    core.BotEcho("Healbomb")
     bActionTaken = core.OrderAbilityPosition(botBrain, heal, HoN.GetGroupCenter(creeps))
   end
 
@@ -194,6 +187,151 @@ function behaviorLib.CustomHealAtWellExecute(botBrain)
  return bActionTaken
 end
 --------------------------------------------------------------
+--                    Courier Usage                         --
+--------------------------------------------------------------
+
+local function ShopUtilityOverride(botBrain)
+  --BotEcho('CanAccessStash: '..tostring(core.unitSelf:CanAccessStash()))
+
+  if behaviorLib.nextBuyTime > HoN.GetGameTime() then
+  		return 0
+  end
+
+  behaviorLib.nextBuyTime = HoN.GetGameTime() + behaviorLib.buyInterval
+
+	behaviorLib.finishedBuying = false
+
+  local units = botBrain:GetLocalUnitsSorted()
+  local bCourierFound = false
+
+  for key,curUnit in pairs(units.Allies) do
+      if curUnit:IsUnitType("Courier") then
+        core.BotEcho("FOUND")
+        bCourierFound = true
+      end
+  end
+
+  -- if bCourierFound then
+  --   core.BotEcho("TRUE")
+  -- end
+  --
+  -- if not bCourierFound then
+  --   core.BotEcho("FALSE")
+  -- end
+
+	local utility = 0
+	if not bCourierFound then
+		if not core.teamBotBrain.bPurchasedThisFrame then
+			utility = 99
+		end
+	end
+
+	if botBrain.bDebugUtility == true and utility ~= 0 then
+		BotEcho(format("  ShopUtility: %g", utility))
+	end
+
+	return utility
+end
+
+behaviorLib.ShopBehavior["Utility"] = ShopUtilityOverride
+
+
+local function ShopExecuteOverride(botBrain)
+	if object.bUseShop == false then
+		return
+	end
+
+	behaviorLib.nextBuyTime = HoN.GetGameTime() + behaviorLib.buyInterval
+
+	--Determine where in the pattern we are (mostly for reloads)
+	if behaviorLib.buyState == behaviorLib.BuyStateUnknown then
+		behaviorLib.DetermineBuyState(botBrain)
+	end
+
+	local unitSelf = core.unitSelf
+	local bShuffled = false
+	local bGoldReduced = false
+	local tInventory = core.unitSelf:GetInventory(true)
+	local nextItemDef = behaviorLib.DetermineNextItemDef(botBrain)
+	local bMyTeamHasHuman = core.MyTeamHasHuman()
+	local bBuyTPStone = (core.nDifficulty ~= core.nEASY_DIFFICULTY) or bMyTeamHasHuman
+
+	--For our first frame of this execute
+	if bBuyTPStone and core.GetLastBehaviorName(botBrain) ~= core.GetCurrentBehaviorName(botBrain) then
+		if nextItemDef:GetName() ~= core.idefHomecomingStone:GetName() then
+			--Seed a TP stone into the buy items after 1 min, Don't buy TP stones if we have Post Haste
+			local sName = "Item_HomecomingStone"
+			local nTime = HoN.GetMatchTime()
+			local tItemPostHaste = core.InventoryContains(tInventory, "Item_PostHaste", true)
+			if nTime > core.MinToMS(1) and #tItemPostHaste then
+				tinsert(behaviorLib.curItemList, 1, sName)
+			end
+
+			nextItemDef = behaviorLib.DetermineNextItemDef(botBrain)
+		end
+	end
+
+	if behaviorLib.printShopDebug then
+		BotEcho("============ BuyItems ============")
+		if nextItemDef then
+			BotEcho("BuyItems - nextItemDef: "..nextItemDef:GetName())
+		else
+			BotEcho("ERROR: BuyItems - Invalid ItemDefinition returned from DetermineNextItemDef")
+		end
+	end
+
+	if nextItemDef ~= nil then
+		core.teamBotBrain.bPurchasedThisFrame = true
+
+		--open up slots if we don't have enough room in the stash + inventory
+		local componentDefs = unitSelf:GetItemComponentsRemaining(nextItemDef)
+		local slotsOpen = behaviorLib.NumberSlotsOpen(tInventory)
+
+		if behaviorLib.printShopDebug then
+			BotEcho("Component defs for "..nextItemDef:GetName()..":")
+			core.printGetNameTable(componentDefs)
+			BotEcho("Checking if we need to sell items...")
+			BotEcho("  #components: "..#componentDefs.."  slotsOpen: "..slotsOpen)
+		end
+
+		if #componentDefs > slotsOpen + 1 then --1 for provisional slot
+			behaviorLib.SellLowestItems(botBrain, #componentDefs - slotsOpen - 1)
+		elseif #componentDefs == 0 then
+			behaviorLib.ShuffleCombine(botBrain, nextItemDef, unitSelf)
+		end
+
+		local nGoldAmountBefore = botBrain:GetGold()
+
+		if nextItemDef ~= nil and unitSelf:GetItemCostRemaining(nextItemDef) < nGoldAmountBefore then
+      core.BotEcho("Bought")
+      unitSelf:PurchaseRemaining(nextItemDef)
+		end
+
+		local nGoldAmountAfter = botBrain:GetGold()
+		bGoldReduced = (nGoldAmountAfter < nGoldAmountBefore)
+
+		--Check to see if this purchased item has uncombined parts
+		componentDefs = unitSelf:GetItemComponentsRemaining(nextItemDef)
+		if #componentDefs == 0 then
+			behaviorLib.ShuffleCombine(botBrain, nextItemDef, unitSelf)
+		end
+		behaviorLib.addItemBehavior(nextItemDef:GetName())
+	end
+
+	bShuffled = behaviorLib.SortInventoryAndStash(botBrain)
+
+	if not bGoldReduced and not bShuffled then
+		if behaviorLib.printShopDebug then
+			BotEcho("Finished Buying!")
+		end
+    core.OrderAbility(botBrain, core.unitSelf:GetAbility(12))
+		behaviorLib.finishedBuying = true
+	end
+end
+
+behaviorLib.ShopBehavior["Execute"] = ShopExecuteOverride
+
+--------------------------------------------------------------
 --                    Mana Methods                          --
 --------------------------------------------------------------
 local manaTarget = nil
@@ -220,13 +358,12 @@ local function ManaUtility(botBrain)
   local mana = skills.mana
   manaTarget = FindManaTarget(botBrain, mana)
   if mana:CanActivate() and manaTarget then
-     return object.nManaUtility
+     return 50
   end
   return 0
 end
 
-local function ManaExecute(botBrain)  
-
+local function ManaExecute(botBrain)
   local mana = skills.mana
   if mana and mana:CanActivate() then
     return core.OrderAbilityEntity(botBrain, mana, manaTarget)
@@ -259,12 +396,11 @@ local function FindHealTarget(botBrain, heal)
   end
   return target
 end
-
 local function HealUtility(botBrain)
   local heal = skills.heal
   healTarget = FindHealTarget(botBrain, heal)
   if heal:CanActivate() and healTarget and core.unitSelf:GetManaPercent() > 0.2 then
-     return object.nHealUtility
+     return 50
   end
   return 0
 end
@@ -272,7 +408,7 @@ end
 local function HealExecute(botBrain)
   local heal = skills.heal
   if heal and heal:CanActivate() then
---    core.BotEcho("Healing")
+    core.BotEcho("Healing")
     return core.OrderAbilityPosition(botBrain, heal, healTarget:GetPosition())
   end
   return false
@@ -280,7 +416,7 @@ end
 local HealBehavior = {}
 HealBehavior["Utility"] = HealUtility
 HealBehavior["Execute"] = HealExecute
-HealBehavior["Name"] = "Heal"
+HealBehavior["Name"] = "Mana"
 tinsert(behaviorLib.tBehaviors, HealBehavior)
 
 --------------------------------------------------------------
