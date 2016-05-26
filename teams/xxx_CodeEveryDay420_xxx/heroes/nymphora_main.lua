@@ -53,7 +53,7 @@ object.heroName = 'Hero_Fairy'
 behaviorLib.StartingItems = {"Item_ManaRegen3", "Item_HealthPotion",}
 behaviorLib.LaneItems = {"Item_ManaBattery", "Item_Marchers", "Item_PowerSupply", "Item_Intelligence5", "Item_Replenish", "Item_Soultrap"}
 behaviorLib.MidItems = {"Item_PlatedGreaves", "Item_Astrolabe", "Item_NomesWisdom", "Item_JadeSpire"}
-behaviorLib.LateItems = {"Item_BehemothsHeart"}
+behaviorLib.LateItems = {"Item_Morph", "Item_BehemothsHeart"}
 
 
 --------------------------------
@@ -154,7 +154,6 @@ local function AttackCreepsExecuteOverride(botBrain)
   local unitsNearby = core.AssessLocalUnits(botBrain, unitSelf:GetPosition(), 900)
   local creeps = unitsNearby.EnemyCreeps
   if heal:CanActivate() and core.NumberElements(creeps) > 2 then
-    core.BotEcho("Healbomb")
     bActionTaken = core.OrderAbilityPosition(botBrain, heal, HoN.GetGroupCenter(creeps))
   end
 
@@ -196,28 +195,22 @@ local function ShopUtilityOverride(botBrain)
   if behaviorLib.nextBuyTime > HoN.GetGameTime() then
   		return 0
   end
-
+  behaviorLib.buyInterval = 10000
   behaviorLib.nextBuyTime = HoN.GetGameTime() + behaviorLib.buyInterval
 
 	behaviorLib.finishedBuying = false
 
   local units = botBrain:GetLocalUnitsSorted()
   local bCourierFound = false
-
+  -- local units2 = HoN.GetUnitsInRadius(core.unitSelf:GetPosition(), 99999, core.UNIT_MASK_UNIT)
+  -- core.printTable(units2)
   for key,curUnit in pairs(units.Allies) do
       if curUnit:IsUnitType("Courier") then
-        core.BotEcho("FOUND")
-        bCourierFound = true
+        if curUnit.HeroId == core.unitSelf.Id then
+          bCourierFound = true
+        end
       end
   end
-
-  -- if bCourierFound then
-  --   core.BotEcho("TRUE")
-  -- end
-  --
-  -- if not bCourierFound then
-  --   core.BotEcho("FALSE")
-  -- end
 
 	local utility = 0
 	if not bCourierFound then
@@ -303,7 +296,6 @@ local function ShopExecuteOverride(botBrain)
 		local nGoldAmountBefore = botBrain:GetGold()
 
 		if nextItemDef ~= nil and unitSelf:GetItemCostRemaining(nextItemDef) < nGoldAmountBefore then
-      core.BotEcho("Bought")
       unitSelf:PurchaseRemaining(nextItemDef)
 		end
 
@@ -408,7 +400,6 @@ end
 local function HealExecute(botBrain)
   local heal = skills.heal
   if heal and heal:CanActivate() then
-    core.BotEcho("Healing")
     return core.OrderAbilityPosition(botBrain, heal, healTarget:GetPosition())
   end
   return false

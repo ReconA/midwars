@@ -74,8 +74,8 @@ behaviorLib.nTeamGroupUtilityMul = 0.51
 
 behaviorLib.StartingItems = {"Item_ManaBattery", "Item_IronBuckler", "Item_Shield2"}
 behaviorLib.LaneItems     = {"Item_EnhancedMarchers", "Item_PowerSupply"}
-behaviorLib.MidItems      = {"Item_SolsBulwark"}
-behaviorLib.LateItems     = {"Item_DaemonicBreastplate", "Item_Pierce", "Item_Immunity"}
+behaviorLib.MidItems      = {"Item_SolsBulwark", "Item_Sicarius", "Item_DaemonicBreastplate"}
+behaviorLib.LateItems     = {"Item_Searinglight", "Item_Weapon3", "Item_BehemothsHeart", "Item_Dawnbringer", "Item_Evasion"}
 
 --------------------------------
 -- Utility constants
@@ -123,7 +123,7 @@ local function getDistance2DSq(unit1, unit2)
     BotEcho("INVALID DISTANCE CALC TARGET")
     return 999999
   end
-  
+
   local vUnit1Pos = unit1:GetPosition()
   local vUnit2Pos = unit2:GetPosition()
   return Vector3.Distance2DSq(vUnit1Pos, vUnit2Pos)
@@ -179,9 +179,9 @@ end
 behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 
 --------------------------------------------------------------
---                    Combo Behavior                       
+--                    Combo Behavior
 -- Combo should be Dash - Slam - Vault - Dash - Vault  (Q E W Q W)
--- and some autoattacks. 
+-- and some autoattacks.
 --------------------------------------------------------------
 
 -- Combo variables
@@ -199,18 +199,18 @@ local function IsComboReady()
   if dash and vault and slam and dash:CanActivate() and vault:CanActivate() and slam:CanActivate() then
     bIsReady = true
   end
-  
+
   return bIsReady
 end
 
 
 -- Choose combo target. Don't choose targets over #comboRange away.
--- Prioritize team target.  
+-- Prioritize team target.
 local function DetermineComboTarget()
 
   local teamBotBrain = core.teamBotBrain
   local teamTarget = teamBotBrain:GetTeamTarget()
-  
+
   if teamTarget and core.CanSeeUnit(botBrain, teamTarget) then
     return teamTarget
   end
@@ -221,7 +221,7 @@ local function DetermineComboTarget()
   local myPos = core.unitSelf:GetPosition()
   local unitTarget = nil
   local distanceTarget = 9999999
-  
+
   for _, unitEnemy in pairs(tLocalEnemies) do
     local enemyPos = unitEnemy:GetPosition()
     local distanceEnemy = Vector3.Distance2DSq(myPos, enemyPos)
@@ -242,10 +242,10 @@ local function ComboUtility(botBrain)
   if comboStartTime and nTime - comboStartTime > comboDuration then -- Combo started some time ago, so time to stop
     comboStartTime = nil
     comboCounter = 0
-    return 0  
+    return 0
   end
-  
-  if comboTarget then 
+
+  if comboTarget then
     local nDistSqrd = getDistance2DSq(core.unitSelf,comboTarget)
     if nDistSqrd > comboRange then
        comboStartTime = nil
@@ -253,11 +253,11 @@ local function ComboUtility(botBrain)
       return 0
     end
   end
-  
+
   if comboCounter > 0 or comboTarget then
     return object.nMidCombo
   end
-  
+
   local dash, vault, slam = skills.dash, skills.vault, skills.slam
   if dash and vault and slam and dash:CanActivate() and vault:CanActivate() and slam:CanActivate() then
     comboTarget = DetermineComboTarget()
@@ -265,7 +265,7 @@ local function ComboUtility(botBrain)
       return object.nComboReady
     end
   end
-  
+
   return 0
 end
 
@@ -273,7 +273,7 @@ local function ComboDash(botBrain)
 
   local dash = skills.dash
   local bContinue = false
-  
+
   if dash and dash:CanActivate() and comboTarget then
     local targetPos = comboTarget:GetPosition()
     local unitSelf = core.unitSelf
@@ -290,35 +290,35 @@ local function ComboDash(botBrain)
       end
     end
   end
-  
+
   return bContinue
 end
 
-local function ComboVault(botBrain) 
-  
-  local vault = skills.vault  
+local function ComboVault(botBrain)
+
+  local vault = skills.vault
   local bContinue = false
-  
+
   if vault and vault:CanActivate() and comboTarget then
     local unitSelf = core.unitSelf
-    
+
     local nRange = vault:GetRange()
     local nDistanceSqrd = getDistance2DSq(unitSelf, comboTarget)
-    
+
     if nDistanceSqrd < (nRange * nRange) then
       BotEcho("VAULT!")
       bContinue = core.OrderAbilityEntity(botBrain, vault, comboTarget)
     end
-    
+
   end
-  
+
   return bContinue
 end
 
 local function ComboSlam(botBrain)
   local slam = skills.slam
   local bContinue = false
-  
+
   if comboTarget and not comboTarget:IsStunned() and not comboTarget:IsMagicImmune() and slam and slam:CanActivate() then
     local targetPos = comboTarget:GetPosition()
     local unitSelf = core.unitSelf
@@ -330,7 +330,7 @@ local function ComboSlam(botBrain)
       bContinue = core.OrderAbility(botBrain, slam)
     end
   end
-  
+
   return bContinue
 end
 
@@ -341,24 +341,24 @@ local function ComboAutoAttack(botBrain)
   if comboTarget and core.IsUnitInRange(unitSelf, comboTarget) then
     bAttack = core.OrderAttack(botBrain, unitSelf, comboTarget)
   end
-  
+
   return bAttack
 end
 
 -- Move towards combo target
 local function ComboMove(botBrain)
-  local unitSelf = core.unitSelf  
+  local unitSelf = core.unitSelf
   if comboTarget then
-    core.OrderMoveToUnit(botBrain, unitSelf, comboTarget)  
+    core.OrderMoveToUnit(botBrain, unitSelf, comboTarget)
   end
 end
 
 -- Combo should be Dash - Slam - Vault - Dash - Vault  (Q E W Q W)
-local function ComboExecute(botBrain)  
+local function ComboExecute(botBrain)
   comboTarget = DetermineComboTarget()
-  
+
   local bContinue = false
-  
+
   if comboCounter == 0 or comboCounter == 3 then
     bContinue = ComboDash(botBrain)
   elseif comboCounter == 1 then
@@ -367,16 +367,16 @@ local function ComboExecute(botBrain)
     autoAttacks = 0
     bContinue = ComboVault(botBrain)
   end
-  
+
   if bContinue then
     comboCounter = comboCounter + 1
-  else   
+  else
     local bAttack = ComboAutoAttack(botBrain)
     if not bAttack then
       ComboMove(botBrain)
     end
   end
-  
+
   return bContinue
 end
 
@@ -399,19 +399,19 @@ local function HarassHeroExecuteOverride(botBrain)
   if unitTarget == nil then
     return object.harassExecuteOld(botBrain)  --Target is invalid, move on to the next behavior
   end
-  
+
   local bCanSee = core.CanSeeUnit(botBrain, unitTarget)
   if not bCanSee then
-    return false 
+    return false
   end
 
-  local unitSelf = core.unitSelf  
+  local unitSelf = core.unitSelf
   local bActionTaken = false
-  
+
   if IsComboReady() then
     bActionTaken = ComboExecute(botBrain)
   end
-  
+
   if not bActionTaken then
     return object.harassExecuteOld(botBrain)
   end
@@ -430,10 +430,10 @@ behaviorLib.HarassHeroBehavior["Execute"] = HarassHeroExecuteOverride
 local function PushExecuteFix(botBrain)
 
 
-  if core.unitSelf:IsChanneling() then 
+  if core.unitSelf:IsChanneling() then
     return
   end
-  
+
   local unitSelf = core.unitSelf
   local bActionTaken = false
 
@@ -495,11 +495,11 @@ function behaviorLib.CustomRetreatExecute(botBrain)
   local bUsedSkill = false
   local unitSelf = core.unitSelf
   local bLowHp = unitSelf:GetHealthPercent() < 0.40
-  
+
   if bLowHp and vault and vault:CanActivate() and target and Vector3.Distance2D(target:GetPosition(), core.allyWell:GetPosition()) > 2000 then
     bUsedSkill = core.OrderAbilityEntity(botBrain, vault, target)
   end
-  
+
   if not bUsedSkill then
     local dash = skills.dash
     local angle = core.HeadingDifference(unitSelf, core.allyMainBaseStructure:GetPosition())
@@ -507,9 +507,149 @@ function behaviorLib.CustomRetreatExecute(botBrain)
       bUsedSkill = core.OrderAbility(botBrain, dash)
     end
   end
-  
+
   return bUsedSkill
 end
+
+
+--------------------------------------------------------------
+--                    Courier Usage                         --
+--------------------------------------------------------------
+
+local function ShopUtilityOverride(botBrain)
+  --BotEcho('CanAccessStash: '..tostring(core.unitSelf:CanAccessStash()))
+
+  if behaviorLib.nextBuyTime > HoN.GetGameTime() then
+  		return 0
+  end
+  behaviorLib.buyInterval = 10000
+  behaviorLib.nextBuyTime = HoN.GetGameTime() + behaviorLib.buyInterval
+
+	behaviorLib.finishedBuying = false
+
+  local units = botBrain:GetLocalUnitsSorted()
+  local bCourierFound = false
+  -- local units2 = HoN.GetUnitsInRadius(core.unitSelf:GetPosition(), 99999, core.UNIT_MASK_UNIT)
+  -- core.printTable(units2)
+  for key,curUnit in pairs(units.Allies) do
+      if curUnit:IsUnitType("Courier") then
+        if curUnit.HeroId == core.unitSelf.Id then
+          bCourierFound = true
+        end
+      end
+  end
+
+	local utility = 0
+	if not bCourierFound then
+		if not core.teamBotBrain.bPurchasedThisFrame then
+			utility = 99
+		end
+	end
+
+	if botBrain.bDebugUtility == true and utility ~= 0 then
+		BotEcho(format("  ShopUtility: %g", utility))
+	end
+
+	return utility
+end
+
+behaviorLib.ShopBehavior["Utility"] = ShopUtilityOverride
+
+
+local function ShopExecuteOverride(botBrain)
+	if object.bUseShop == false then
+		return
+	end
+
+	behaviorLib.nextBuyTime = HoN.GetGameTime() + behaviorLib.buyInterval
+
+	--Determine where in the pattern we are (mostly for reloads)
+	if behaviorLib.buyState == behaviorLib.BuyStateUnknown then
+		behaviorLib.DetermineBuyState(botBrain)
+	end
+
+	local unitSelf = core.unitSelf
+	local bShuffled = false
+	local bGoldReduced = false
+	local tInventory = core.unitSelf:GetInventory(true)
+	local nextItemDef = behaviorLib.DetermineNextItemDef(botBrain)
+	local bMyTeamHasHuman = core.MyTeamHasHuman()
+	local bBuyTPStone = (core.nDifficulty ~= core.nEASY_DIFFICULTY) or bMyTeamHasHuman
+
+	--For our first frame of this execute
+	if bBuyTPStone and core.GetLastBehaviorName(botBrain) ~= core.GetCurrentBehaviorName(botBrain) then
+		if nextItemDef:GetName() ~= core.idefHomecomingStone:GetName() then
+			--Seed a TP stone into the buy items after 1 min, Don't buy TP stones if we have Post Haste
+			local sName = "Item_HomecomingStone"
+			local nTime = HoN.GetMatchTime()
+			local tItemPostHaste = core.InventoryContains(tInventory, "Item_PostHaste", true)
+			if nTime > core.MinToMS(1) and #tItemPostHaste then
+				tinsert(behaviorLib.curItemList, 1, sName)
+			end
+
+			nextItemDef = behaviorLib.DetermineNextItemDef(botBrain)
+		end
+	end
+
+	if behaviorLib.printShopDebug then
+		BotEcho("============ BuyItems ============")
+		if nextItemDef then
+			BotEcho("BuyItems - nextItemDef: "..nextItemDef:GetName())
+		else
+			BotEcho("ERROR: BuyItems - Invalid ItemDefinition returned from DetermineNextItemDef")
+		end
+	end
+
+	if nextItemDef ~= nil then
+		core.teamBotBrain.bPurchasedThisFrame = true
+
+		--open up slots if we don't have enough room in the stash + inventory
+		local componentDefs = unitSelf:GetItemComponentsRemaining(nextItemDef)
+		local slotsOpen = behaviorLib.NumberSlotsOpen(tInventory)
+
+		if behaviorLib.printShopDebug then
+			BotEcho("Component defs for "..nextItemDef:GetName()..":")
+			core.printGetNameTable(componentDefs)
+			BotEcho("Checking if we need to sell items...")
+			BotEcho("  #components: "..#componentDefs.."  slotsOpen: "..slotsOpen)
+		end
+
+		if #componentDefs > slotsOpen + 1 then --1 for provisional slot
+			behaviorLib.SellLowestItems(botBrain, #componentDefs - slotsOpen - 1)
+		elseif #componentDefs == 0 then
+			behaviorLib.ShuffleCombine(botBrain, nextItemDef, unitSelf)
+		end
+
+		local nGoldAmountBefore = botBrain:GetGold()
+
+		if nextItemDef ~= nil and unitSelf:GetItemCostRemaining(nextItemDef) < nGoldAmountBefore then
+      unitSelf:PurchaseRemaining(nextItemDef)
+		end
+
+		local nGoldAmountAfter = botBrain:GetGold()
+		bGoldReduced = (nGoldAmountAfter < nGoldAmountBefore)
+
+		--Check to see if this purchased item has uncombined parts
+		componentDefs = unitSelf:GetItemComponentsRemaining(nextItemDef)
+		if #componentDefs == 0 then
+			behaviorLib.ShuffleCombine(botBrain, nextItemDef, unitSelf)
+		end
+		behaviorLib.addItemBehavior(nextItemDef:GetName())
+	end
+
+	bShuffled = behaviorLib.SortInventoryAndStash(botBrain)
+
+	if not bGoldReduced and not bShuffled then
+		if behaviorLib.printShopDebug then
+			BotEcho("Finished Buying!")
+		end
+    core.OrderAbility(botBrain, core.unitSelf:GetAbility(12))
+		behaviorLib.finishedBuying = true
+	end
+end
+
+behaviorLib.ShopBehavior["Execute"] = ShopExecuteOverride
+
 
 function behaviorLib.CustomRetreatExecute(botBrain)
   local leap = skills.leap
@@ -530,4 +670,3 @@ function behaviorLib.CustomRetreatExecute(botBrain)
 end
 
 BotEcho('finished loading monkeyking_main')
-
