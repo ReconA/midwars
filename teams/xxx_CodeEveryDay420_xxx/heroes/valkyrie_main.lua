@@ -44,7 +44,6 @@ local ceil, floor, pi, tan, atan, atan2, abs, cos, sin, acos, max, random
   = _G.math.ceil, _G.math.floor, _G.math.pi, _G.math.tan, _G.math.atan, _G.math.atan2, _G.math.abs, _G.math.cos, _G.math.sin, _G.math.acos, _G.math.max, _G.math.random
 
 local BotEcho, VerboseLog, BotLog = core.BotEcho, core.VerboseLog, core.BotLog
-local Clamp = core.Clamp
 
 BotEcho('loading valkyrie_main...')
 
@@ -63,7 +62,7 @@ behaviorLib.nTeamGroupUtilityMul = 0.51
 --------------------------------
 -- Lanes
 --------------------------------
-core.tLanePreferences = {Jungle = 0, Mid = 5, ShortSolo = 4, LongSolo = 2, ShortSupport = 0, LongSupport = 0, ShortCarry = 4, LongCarry = 3}
+core.tLanePreferences = {Jungle = 0, Mid = 5, ShortSolo = 0, LongSolo = 0, ShortSupport = 0, LongSupport = 0, ShortCarry = 0, LongCarry = 0}
 
 --------------------------------
 -- Skills

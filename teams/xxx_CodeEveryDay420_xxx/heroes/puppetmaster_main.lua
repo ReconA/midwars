@@ -304,7 +304,9 @@ function object:oncombateventOverride(EventData)
     if EventData.InflictorName == "Ability_PuppetMaster4" then
        object.puppetTarget = EventData.TargetUnit
        local teamBotBrain = core.teamBotBrain
-       teamBotBrain:SetTeamTarget(object.puppetTarget)
+       if teamBotBrain.SetTeamTarget then
+         teamBotBrain:SetTeamTarget(object.puppetTarget)
+       end       
     end
   end
 end
@@ -367,7 +369,10 @@ behaviorLib.CustomHarassUtility = CustomHarassUtilityFnOverride
 
 local function HarassHeroExecuteOverride(botBrain)
   local teamBotBrain = core.teamBotBrain
-  local teamTarget = teamBotBrain:GetTeamTarget()
+  if teamBotBrain.GetTeamTarget then
+    local teamTarget = teamBotBrain:GetTeamTarget()
+  end
+    
   local unitTarget = nil
   if teamTarget and core.CanSeeUnit(botBrain, teamTarget) then
     unitTarget = teamTarget
