@@ -187,6 +187,143 @@ function behaviorLib.CustomHealAtWellExecute(botBrain)
  return bActionTaken
 end
 --------------------------------------------------------------
+--                    Courier Usage                         --
+--------------------------------------------------------------
+
+local function ShopUtilityOverride(botBrain)
+  --BotEcho('CanAccessStash: '..tostring(core.unitSelf:CanAccessStash()))
+
+  if behaviorLib.nextBuyTime > HoN.GetGameTime() then
+  		return 0
+  end
+
+  behaviorLib.nextBuyTime = HoN.GetGameTime() + behaviorLib.buyInterval
+
+	behaviorLib.finishedBuying = false
+
+  local units = botBrain:GetLocalUnitsSorted()
+  local bCourierFound = false
+
+  for key,curUnit in pairs(units.Allies) do
+      if curUnit:IsUnitType("Courier") then
+        core.BotEcho("FOUND")
+        bCourierFound = true
+      end
+  end
+
+	local utility = 0
+	if not bCourierFound then
+		if not core.teamBotBrain.bPurchasedThisFrame then
+			utility = 99
+		end
+	end
+
+	if botBrain.bDebugUtility == true and utility ~= 0 then
+		BotEcho(format("  ShopUtility: %g", utility))
+	end
+
+	return utility
+end
+
+behaviorLib.ShopBehavior["Utility"] = ShopUtilityOverride
+
+
+local function ShopExecuteOverride(botBrain)
+	if object.bUseShop == false then
+		return
+	end
+
+	behaviorLib.nextBuyTime = HoN.GetGameTime() + behaviorLib.buyInterval
+
+	--Determine where in the pattern we are (mostly for reloads)
+	if behaviorLib.buyState == behaviorLib.BuyStateUnknown then
+		behaviorLib.DetermineBuyState(botBrain)
+	end
+
+	local unitSelf = core.unitSelf
+	local bShuffled = false
+	local bGoldReduced = false
+	local tInventory = core.unitSelf:GetInventory(true)
+	local nextItemDef = behaviorLib.DetermineNextItemDef(botBrain)
+	local bMyTeamHasHuman = core.MyTeamHasHuman()
+	local bBuyTPStone = (core.nDifficulty ~= core.nEASY_DIFFICULTY) or bMyTeamHasHuman
+
+	--For our first frame of this execute
+	if bBuyTPStone and core.GetLastBehaviorName(botBrain) ~= core.GetCurrentBehaviorName(botBrain) then
+		if nextItemDef:GetName() ~= core.idefHomecomingStone:GetName() then
+			--Seed a TP stone into the buy items after 1 min, Don't buy TP stones if we have Post Haste
+			local sName = "Item_HomecomingStone"
+			local nTime = HoN.GetMatchTime()
+			local tItemPostHaste = core.InventoryContains(tInventory, "Item_PostHaste", true)
+			if nTime > core.MinToMS(1) and #tItemPostHaste then
+				tinsert(behaviorLib.curItemList, 1, sName)
+			end
+
+			nextItemDef = behaviorLib.DetermineNextItemDef(botBrain)
+		end
+	end
+
+	if behaviorLib.printShopDebug then
+		BotEcho("============ BuyItems ============")
+		if nextItemDef then
+			BotEcho("BuyItems - nextItemDef: "..nextItemDef:GetName())
+		else
+			BotEcho("ERROR: BuyItems - Invalid ItemDefinition returned from DetermineNextItemDef")
+		end
+	end
+
+	if nextItemDef ~= nil then
+		core.teamBotBrain.bPurchasedThisFrame = true
+
+		--open up slots if we don't have enough room in the stash + inventory
+		local componentDefs = unitSelf:GetItemComponentsRemaining(nextItemDef)
+		local slotsOpen = behaviorLib.NumberSlotsOpen(tInventory)
+
+		if behaviorLib.printShopDebug then
+			BotEcho("Component defs for "..nextItemDef:GetName()..":")
+			core.printGetNameTable(componentDefs)
+			BotEcho("Checking if we need to sell items...")
+			BotEcho("  #components: "..#componentDefs.."  slotsOpen: "..slotsOpen)
+		end
+
+		if #componentDefs > slotsOpen + 1 then --1 for provisional slot
+			behaviorLib.SellLowestItems(botBrain, #componentDefs - slotsOpen - 1)
+		elseif #componentDefs == 0 then
+			behaviorLib.ShuffleCombine(botBrain, nextItemDef, unitSelf)
+		end
+
+		local nGoldAmountBefore = botBrain:GetGold()
+
+		if nextItemDef ~= nil and unitSelf:GetItemCostRemaining(nextItemDef) < nGoldAmountBefore then
+      core.BotEcho("Bought")
+      unitSelf:PurchaseRemaining(nextItemDef)
+		end
+
+		local nGoldAmountAfter = botBrain:GetGold()
+		bGoldReduced = (nGoldAmountAfter < nGoldAmountBefore)
+
+		--Check to see if this purchased item has uncombined parts
+		componentDefs = unitSelf:GetItemComponentsRemaining(nextItemDef)
+		if #componentDefs == 0 then
+			behaviorLib.ShuffleCombine(botBrain, nextItemDef, unitSelf)
+		end
+		behaviorLib.addItemBehavior(nextItemDef:GetName())
+	end
+
+	bShuffled = behaviorLib.SortInventoryAndStash(botBrain)
+
+	if not bGoldReduced and not bShuffled then
+		if behaviorLib.printShopDebug then
+			BotEcho("Finished Buying!")
+		end
+    core.OrderAbility(botBrain, core.unitSelf:GetAbility(12))
+		behaviorLib.finishedBuying = true
+	end
+end
+
+behaviorLib.ShopBehavior["Execute"] = ShopExecuteOverride
+
+--------------------------------------------------------------
 --                    Mana Methods                          --
 --------------------------------------------------------------
 local manaTarget = nil
