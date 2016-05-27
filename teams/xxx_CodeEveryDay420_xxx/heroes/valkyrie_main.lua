@@ -68,7 +68,7 @@ core.tLanePreferences = {Jungle = 0, Mid = 5, ShortSolo = 0, LongSolo = 0, Short
 -- Skills
 --------------------------------
 object.tSkills = {
-  2, 0, 0, 1, 0,
+  1, 0, 0, 2, 0,
   3, 0, 2, 2, 2,
   3, 1, 1, 1, 4,
   3, 4, 4, 4, 4,
@@ -93,19 +93,14 @@ function object:SkillBuild()
     end
   end
 
-  if unitSelf:GetAbilityPointsAvailable() <= 0 then
+  local nPoints = unitSelf:GetAbilityPointsAvailable()
+  if nPoints <= 0 then
     return
   end
-  if skills.ulti:CanLevelUp() then
-    skills.ulti:LevelUp()
-  elseif skills.call:CanLevelUp() then
-    skills.call:LevelUp()
-  elseif skills.leap:CanLevelUp() then
-    skills.leap:LevelUp()
-  elseif skills.javelin:CanLevelUp() then
-    skills.javelin:LevelUp()
-  else
-    skills.attributeBoost:LevelUp()
+
+  local nLevel = unitSelf:GetLevel()
+  for i = nLevel, (nLevel + nPoints) do
+    unitSelf:GetAbility( self.tSkills[i] ):LevelUp()
   end
 end
 
