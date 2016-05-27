@@ -25,10 +25,6 @@ function generics.CustomHarassUtility(target)
 
   nUtil = nUtil - (1 - unitSelf:GetHealthPercent()) * 100
 
-  if unitSelf:GetHealth() > target:GetHealth() then
-     nUtil = nUtil + 10
-  end
-
   if target:IsChanneling() or target:IsDisarmed() or target:IsImmobilized() or target:IsPerplexed() or target:IsSilenced() or target:IsStunned() or unitSelf:IsStealth() then
     nUtil = nUtil + 50
   end
@@ -36,8 +32,9 @@ function generics.CustomHarassUtility(target)
   local unitsNearby = core.AssessLocalUnits(object, myPos,100)
 
 
-  if core.NumberElements(unitsNearby.AllyHeroes) == 0 then
-
+  if core.NumberElements(unitsNearby.AllyHeroes) < 2 then
+    nUtil = nUtil - 20
+    
     if core.GetClosestEnemyTower(myPos, 720) then
       nUtil = nUtil - 100
     end
