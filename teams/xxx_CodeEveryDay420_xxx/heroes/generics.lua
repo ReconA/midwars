@@ -33,7 +33,7 @@ function generics.CustomHarassUtility(target)
 
 
   if core.NumberElements(unitsNearby.AllyHeroes) < 2 then
-    nUtil = nUtil - 20
+    nUtil = nUtil - 26
     
     if core.GetClosestEnemyTower(myPos, 720) then
       nUtil = nUtil - 100

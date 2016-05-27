@@ -59,11 +59,11 @@ behaviorLib.MidItems = {"Item_WhisperingHelm", "Item_Weapon3", "Item_Critical2",
 behaviorLib.LateItems = {"Item_Critical4", "Item_Morph"}
 
 -- Harass up from ready skills
-object.nFullWhip = 15;
-object.nVoodooUp = 30;
+object.nFullWhip = 0;
+object.nVoodooUp = 10;
 
 -- Team group utility. Default is 0.35
-behaviorLib.nTeamGroupUtilityMul = 0.51
+behaviorLib.nTeamGroupUtilityMul = 0.45
 
 
 -- Skillbuild table, 0=Hold, 1=Puppet Show, 2=Whiplash, 3=Voodoo, 4=Attri

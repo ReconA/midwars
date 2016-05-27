@@ -55,6 +55,8 @@ behaviorLib.LaneItems = {"Item_ManaBattery", "Item_Marchers", "Item_PowerSupply"
 behaviorLib.MidItems = {"Item_PlatedGreaves", "Item_Astrolabe", "Item_NomesWisdom", "Item_JadeSpire"}
 behaviorLib.LateItems = {"Item_Morph", "Item_BehemothsHeart"}
 
+-- Team group utility. Default is 0.35
+behaviorLib.nTeamGroupUtilityMul = 0.45
 
 --------------------------------
 -- Lanes

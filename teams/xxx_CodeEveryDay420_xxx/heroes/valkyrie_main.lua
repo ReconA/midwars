@@ -56,7 +56,7 @@ behaviorLib.MidItems = {"Item_Pierce", "Item_Lightning1", "Item_Pierce 3"}
 behaviorLib.LateItems = {"Item_Wingbow", "Item_Evasion", "Item_Weapon3", "Item_BehemothsHeart"}
 
 -- Team group utility. Default is 0.35
-behaviorLib.nTeamGroupUtilityMul = 0.51
+behaviorLib.nTeamGroupUtilityMul = 0.45
 
 
 --------------------------------

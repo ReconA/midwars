@@ -54,7 +54,7 @@ BotEcho('loading devourer_main...')
 object.heroName = 'Hero_Devourer'
 
 -- Team group utility. Default is 0.35
-behaviorLib.nTeamGroupUtilityMul = 0.51
+behaviorLib.nTeamGroupUtilityMul = 0.45
 
 --------------------------------
 -- Lanes

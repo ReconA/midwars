@@ -70,7 +70,7 @@ object.tSkills = {
 }
 
 -- Team group utility. Default is 0.35
-behaviorLib.nTeamGroupUtilityMul = 0.51
+behaviorLib.nTeamGroupUtilityMul = 0.45
 
 behaviorLib.StartingItems = {"Item_ManaBattery", "Item_IronBuckler", "Item_Shield2"}
 behaviorLib.LaneItems     = {"Item_EnhancedMarchers", "Item_PowerSupply"}
@@ -80,12 +80,9 @@ behaviorLib.LateItems     = {"Item_Searinglight", "Item_Weapon3", "Item_Behemoth
 --------------------------------
 -- Utility constants
 --------------------------------
-object.nComboReady  = 40  -- How much utility from a ready combo
-object.nMidCombo    = 50  -- How much utility from being mid combo
+object.nComboReady  = 10  -- How much utility from a ready combo
+object.nMidCombo    = 15  -- How much utility from being mid combo
 
-object.nDashReady   = 10
-object.nVaultReady  = 10
-object.nSlamReady   = 10
 
 --------------------------------
 -- Skills
