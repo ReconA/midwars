@@ -68,8 +68,8 @@ core.tLanePreferences = {Jungle = 0, Mid = 5, ShortSolo = 0, LongSolo = 0, Short
 -- Skills
 --------------------------------
 object.tSkills = {
-  2, 0, 0, 2, 0,
-  3, 0, 1, 2, 2,
+  2, 0, 0, 1, 0,
+  3, 0, 2, 2, 2,
   3, 1, 1, 1, 4,
   3, 4, 4, 4, 4,
   4, 4, 4, 4, 4,
